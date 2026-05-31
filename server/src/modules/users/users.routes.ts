@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { authMiddleware, requireRole, AuthRequest } from '../../middlewares/auth'
 import { prisma } from '../../database/prisma'
 import { AppError } from '../../errors/AppError'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 
 const router = Router()
