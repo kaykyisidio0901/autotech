@@ -1,0 +1,340 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Empresa {
+  id          Int      @id @default(autoincrement())
+  razaoSocial String   @map("razao_social")
+  nomeFantasia String  @map("nome_fantasia")
+  cnpj        String   @unique
+  ie          String?
+  telefone    String?
+  whatsapp    String?
+  email       String?
+  site        String?
+  cep         String?
+  endereco    String?
+  numero      String?
+  bairro      String?
+  cidade      String?
+  estado      String?
+  logo        String?
+  planoId     String   @default("basic") @map("plano_id")
+  assinaturaStatus String @default("teste") @map("assinatura_status")
+  dataVencimento DateTime? @map("data_vencimento")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  users        User[]
+  clientes     Cliente[]
+  veiculos     Veiculo[]
+  categorias   Categoria[]
+  fornecedores Fornecedor[]
+  produtos     Produto[]
+  vendas       Venda[]
+  ordensServico OrdemServico[]
+  contasReceber ContaReceber[]
+  contasPagar  ContaPagar[]
+  movimentacoes MovimentacaoEstoque[]
+  compras      Compra[]
+  notasFiscais NotaFiscal[]
+
+  @@map("empresas")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  empresaId Int      @map("empresa_id")
+  nome      String
+  email     String
+  senha     String
+  role      String   @default("funcionario")
+  telefone  String?
+  cargo     String?
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, email])
+  @@map("users")
+}
+
+model Cliente {
+  id        Int      @id @default(autoincrement())
+  empresaId Int      @map("empresa_id")
+  nome      String
+  cpf       String?
+  rg        String?
+  telefone  String?
+  whatsapp  String?
+  email     String?
+  cep       String?
+  endereco  String?
+  numero    String?
+  bairro    String?
+  cidade    String?
+  estado    String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  empresa   Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  veiculos  Veiculo[]
+
+  @@unique([empresaId, cpf])
+  @@map("clientes")
+}
+
+model Veiculo {
+  id            Int      @id @default(autoincrement())
+  empresaId     Int      @map("empresa_id")
+  clienteId     Int      @map("cliente_id")
+  placa         String
+  marca         String
+  modelo        String
+  ano           Int?
+  cor           String?
+  chassi        String?
+  renavam       String?
+  combustivel   String?
+  quilometragem Int?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  empresa  Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  cliente  Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, placa])
+  @@map("veiculos")
+}
+
+model Categoria {
+  id        Int      @id @default(autoincrement())
+  empresaId Int      @map("empresa_id")
+  nome      String
+  descricao String?
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  empresa  Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  produtos Produto[]
+
+  @@unique([empresaId, nome])
+  @@map("categorias")
+}
+
+model Fornecedor {
+  id          Int      @id @default(autoincrement())
+  empresaId   Int      @map("empresa_id")
+  razaoSocial String   @map("razao_social")
+  nomeFantasia String  @map("nome_fantasia")
+  cnpj        String?
+  telefone    String?
+  whatsapp    String?
+  email       String?
+  endereco    String?
+  ativo       Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  empresa  Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  produtos Produto[]
+
+  @@map("fornecedores")
+}
+
+model Produto {
+  id            Int      @id @default(autoincrement())
+  empresaId     Int      @map("empresa_id")
+  categoriaId   Int?     @map("categoria_id")
+  fornecedorId  Int?     @map("fornecedor_id")
+  codigoInterno String   @map("codigo_interno")
+  codigoBarras  String?  @map("codigo_barras")
+  nome          String
+  marca         String?
+  descricao     String?
+  precoCusto    Float    @default(0) @map("preco_custo")
+  precoVenda    Float    @default(0) @map("preco_venda")
+  quantidade    Int      @default(0)
+  estoqueMinimo Int      @default(0) @map("estoque_minimo")
+  status        Boolean  @default(true)
+  imagem        String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  empresa       Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  categoria     Categoria?        @relation(fields: [categoriaId], references: [id])
+  fornecedor    Fornecedor?       @relation(fields: [fornecedorId], references: [id])
+  movimentacoes MovimentacaoEstoque[]
+
+  @@map("produtos")
+}
+
+model Venda {
+  id             Int      @id @default(autoincrement())
+  empresaId      Int      @map("empresa_id")
+  clienteId      Int?     @map("cliente_id")
+  vendedorId     Int?     @map("vendedor_id")
+  total          Float    @default(0)
+  desconto       Float    @default(0)
+  formaPagamento String   @map("forma_pagamento")
+  parcelas       Int      @default(1)
+  status         String   @default("pendente")
+  data           DateTime @default(now())
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  empresa  Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  itens    VendaItem[]
+
+  @@map("vendas")
+}
+
+model VendaItem {
+  id            Int   @id @default(autoincrement())
+  vendaId       Int   @map("venda_id")
+  produtoId     Int?  @map("produto_id")
+  produtoNome   String @map("produto_nome")
+  quantidade    Int   @default(1)
+  precoUnitario Float @map("preco_unitario")
+  total         Float @default(0)
+
+  venda Venda @relation(fields: [vendaId], references: [id], onDelete: Cascade)
+
+  @@map("venda_itens")
+}
+
+model OrdemServico {
+  id            Int      @id @default(autoincrement())
+  empresaId     Int      @map("empresa_id")
+  clienteId     Int      @map("cliente_id")
+  veiculoId     Int?     @map("veiculo_id")
+  numero        String
+  dataEntrada   DateTime @default(now()) @map("data_entrada")
+  dataPrevista  DateTime? @map("data_prevista")
+  responsavel   String?
+  observacoes   String?
+  valorMaoObra  Float    @default(0) @map("valor_mao_obra")
+  valorProdutos Float    @default(0) @map("valor_produtos")
+  desconto      Float    @default(0)
+  valorFinal    Float    @default(0) @map("valor_final")
+  status        String   @default("aberta")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  empresa  Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  servicos OSServico[]
+  produtosOS OSProduto[]
+
+  @@map("ordens_servico")
+}
+
+model OSServico {
+  id          Int    @id @default(autoincrement())
+  osId        Int    @map("os_id")
+  descricao   String
+  valor       Float  @default(0)
+
+  os OrdemServico @relation(fields: [osId], references: [id], onDelete: Cascade)
+
+  @@map("os_servicos")
+}
+
+model OSProduto {
+  id        Int    @id @default(autoincrement())
+  osId      Int    @map("os_id")
+  nome      String
+  quantidade Int   @default(1)
+  valor     Float  @default(0)
+
+  os OrdemServico @relation(fields: [osId], references: [id], onDelete: Cascade)
+
+  @@map("os_produtos")
+}
+
+model ContaReceber {
+  id         Int      @id @default(autoincrement())
+  empresaId  Int      @map("empresa_id")
+  cliente    String
+  descricao  String
+  valor      Float
+  vencimento DateTime
+  status     String   @default("pendente")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@map("contas_receber")
+}
+
+model ContaPagar {
+  id         Int      @id @default(autoincrement())
+  empresaId  Int      @map("empresa_id")
+  fornecedor String
+  descricao  String
+  valor      Float
+  vencimento DateTime
+  status     String   @default("pendente")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@map("contas_pagar")
+}
+
+model MovimentacaoEstoque {
+  id          Int      @id @default(autoincrement())
+  empresaId   Int      @map("empresa_id")
+  produtoId   Int      @map("produto_id")
+  tipo        String
+  quantidade  Int
+  observacao  String?
+  responsavel String?
+  data        DateTime @default(now())
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  produto Produto @relation(fields: [produtoId], references: [id])
+
+  @@map("movimentacoes_estoque")
+}
+
+model Compra {
+  id                 Int      @id @default(autoincrement())
+  empresaId          Int      @map("empresa_id")
+  numeroNfe          String?  @map("numero_nfe")
+  fornecedor         String
+  data               DateTime @default(now())
+  valor              Float
+  quantidadeProdutos Int      @default(0) @map("quantidade_produtos")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@map("compras")
+}
+
+model NotaFiscal {
+  id           Int      @id @default(autoincrement())
+  empresaId    Int      @map("empresa_id")
+  numero       String
+  fornecedor   String
+  cnpj         String?
+  dataEmissao  DateTime @map("data_emissao")
+  valorTotal   Float    @map("valor_total")
+  parcelas     Int      @default(1)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@map("notas_fiscais")
+}

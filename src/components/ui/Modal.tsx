@@ -1,0 +1,30 @@
+import type { ReactNode } from 'react'
+
+interface ModalProps {
+  open: boolean
+  onClose: () => void
+  title: string
+  children: ReactNode
+  size?: 'sm' | 'md' | 'lg' | 'xl'
+}
+
+export function Modal({ open, onClose, title, children, size = 'md' }: ModalProps) {
+  if (!open) return null
+
+  const sizes = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-2xl', xl: 'max-w-4xl' }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
+      <div
+        className={`bg-dark-800 border border-dark-600 rounded-xl p-6 w-full ${sizes[size]} mx-4 max-h-[90vh] overflow-y-auto`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-100">{title}</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-300 text-xl cursor-pointer">✕</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
