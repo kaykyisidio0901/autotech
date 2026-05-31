@@ -44,7 +44,12 @@ app.use('/api/notas-fiscais', notasFiscaisRoutes)
 app.use('/api/assinaturas', assinaturasRoutes)
 
 app.get('/api/health', (_req, res) => {
+  res.set('Content-Type', 'application/json')
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
+})
+
+app.get('/api/ping', (_req, res) => {
+  res.json({ pong: true })
 })
 
 app.use(errorHandler)
