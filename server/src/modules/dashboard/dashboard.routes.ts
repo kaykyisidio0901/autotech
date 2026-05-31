@@ -67,7 +67,7 @@ router.get('/', async (req: AuthRequest, res, next) => {
         quantidade: v._count,
       })),
     })
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 export default router

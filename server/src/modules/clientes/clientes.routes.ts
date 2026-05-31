@@ -47,7 +47,7 @@ router.get('/', async (req: AuthRequest, res, next) => {
       _count: undefined,
     }))
     res.json(result)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.get('/:id', async (req: AuthRequest, res, next) => {
@@ -58,7 +58,7 @@ router.get('/:id', async (req: AuthRequest, res, next) => {
     })
     if (!cliente) throw new AppError('Cliente não encontrado', 404)
     res.json(cliente)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.post('/', async (req: AuthRequest, res, next) => {
@@ -66,7 +66,7 @@ router.post('/', async (req: AuthRequest, res, next) => {
     const data = createSchema.parse(req.body)
     const cliente = await prisma.cliente.create({ data: { ...data, empresaId: req.empresaId! } })
     res.status(201).json(cliente)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.put('/:id', async (req: AuthRequest, res, next) => {
@@ -78,7 +78,7 @@ router.put('/:id', async (req: AuthRequest, res, next) => {
     })
     if (cliente.count === 0) throw new AppError('Cliente não encontrado', 404)
     res.json({ message: 'Cliente atualizado' })
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.delete('/:id', async (req: AuthRequest, res, next) => {
@@ -88,7 +88,7 @@ router.delete('/:id', async (req: AuthRequest, res, next) => {
     })
     if (cliente.count === 0) throw new AppError('Cliente não encontrado', 404)
     res.json({ message: 'Cliente removido' })
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 export default router

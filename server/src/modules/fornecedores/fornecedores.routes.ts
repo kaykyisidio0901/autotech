@@ -32,7 +32,7 @@ router.get('/', async (req: AuthRequest, res, next) => {
 
     const fornecedores = await prisma.fornecedor.findMany({ where, orderBy: { razaoSocial: 'asc' } })
     res.json(fornecedores)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.post('/', async (req: AuthRequest, res, next) => {
@@ -40,7 +40,7 @@ router.post('/', async (req: AuthRequest, res, next) => {
     const data = schema.parse(req.body)
     const fornecedor = await prisma.fornecedor.create({ data: { ...data, nomeFantasia: data.nomeFantasia || '', empresaId: req.empresaId! } })
     res.status(201).json(fornecedor)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.put('/:id', async (req: AuthRequest, res, next) => {
@@ -52,7 +52,7 @@ router.put('/:id', async (req: AuthRequest, res, next) => {
     })
     if (fornecedor.count === 0) throw new AppError('Fornecedor não encontrado', 404)
     res.json({ message: 'Fornecedor atualizado' })
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.delete('/:id', async (req: AuthRequest, res, next) => {
@@ -62,7 +62,7 @@ router.delete('/:id', async (req: AuthRequest, res, next) => {
       data: { ativo: false },
     })
     res.json({ message: 'Fornecedor desativado' })
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 export default router

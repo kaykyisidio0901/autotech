@@ -23,7 +23,7 @@ router.get('/', async (req: AuthRequest, res, next) => {
       orderBy: { createdAt: 'desc' },
     })
     res.json(notas)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.post('/', async (req: AuthRequest, res, next) => {
@@ -37,7 +37,7 @@ router.post('/', async (req: AuthRequest, res, next) => {
       },
     })
     res.status(201).json(nota)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.delete('/:id', async (req: AuthRequest, res, next) => {
@@ -46,7 +46,7 @@ router.delete('/:id', async (req: AuthRequest, res, next) => {
       where: { id: Number(req.params.id), empresaId: req.empresaId },
     })
     res.json({ message: 'Nota removida' })
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 export default router

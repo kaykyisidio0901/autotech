@@ -32,7 +32,7 @@ router.get('/', async (req: AuthRequest, res, next) => {
       orderBy: { data: 'desc' },
     })
     res.json(mov)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.post('/', async (req: AuthRequest, res, next) => {
@@ -66,7 +66,7 @@ router.post('/', async (req: AuthRequest, res, next) => {
     }
 
     res.status(201).json(mov)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.get('/estoque-geral', async (req: AuthRequest, res, next) => {
@@ -77,7 +77,7 @@ router.get('/estoque-geral', async (req: AuthRequest, res, next) => {
       orderBy: { nome: 'asc' },
     })
     res.json(produtos)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 export default router

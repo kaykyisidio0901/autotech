@@ -26,7 +26,7 @@ router.get('/', async (req: AuthRequest, res, next) => {
       _count: undefined,
     }))
     res.json(result)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.post('/', async (req: AuthRequest, res, next) => {
@@ -38,7 +38,7 @@ router.post('/', async (req: AuthRequest, res, next) => {
     if (existing) throw new AppError('Categoria já existe', 409)
     const categoria = await prisma.categoria.create({ data: { ...data, empresaId: req.empresaId! } })
     res.status(201).json(categoria)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.put('/:id', async (req: AuthRequest, res, next) => {
@@ -50,7 +50,7 @@ router.put('/:id', async (req: AuthRequest, res, next) => {
     })
     if (categoria.count === 0) throw new AppError('Categoria não encontrada', 404)
     res.json({ message: 'Categoria atualizada' })
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.delete('/:id', async (req: AuthRequest, res, next) => {
@@ -60,7 +60,7 @@ router.delete('/:id', async (req: AuthRequest, res, next) => {
       data: { ativo: false },
     })
     res.json({ message: 'Categoria desativada' })
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 export default router

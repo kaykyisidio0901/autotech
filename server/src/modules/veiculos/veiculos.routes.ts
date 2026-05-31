@@ -28,7 +28,7 @@ router.get('/', async (req: AuthRequest, res, next) => {
       orderBy: { placa: 'asc' },
     })
     res.json(veiculos)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.get('/cliente/:clienteId', async (req: AuthRequest, res, next) => {
@@ -37,7 +37,7 @@ router.get('/cliente/:clienteId', async (req: AuthRequest, res, next) => {
       where: { empresaId: req.empresaId, clienteId: Number(req.params.clienteId) },
     })
     res.json(veiculos)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.post('/', async (req: AuthRequest, res, next) => {
@@ -49,7 +49,7 @@ router.post('/', async (req: AuthRequest, res, next) => {
     if (existing) throw new AppError('Placa já cadastrada', 409)
     const veiculo = await prisma.veiculo.create({ data: { ...data, empresaId: req.empresaId! } })
     res.status(201).json(veiculo)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.put('/:id', async (req: AuthRequest, res, next) => {
@@ -61,7 +61,7 @@ router.put('/:id', async (req: AuthRequest, res, next) => {
     })
     if (veiculo.count === 0) throw new AppError('Veículo não encontrado', 404)
     res.json({ message: 'Veículo atualizado' })
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.delete('/:id', async (req: AuthRequest, res, next) => {
@@ -71,7 +71,7 @@ router.delete('/:id', async (req: AuthRequest, res, next) => {
     })
     if (veiculo.count === 0) throw new AppError('Veículo não encontrado', 404)
     res.json({ message: 'Veículo removido' })
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 export default router

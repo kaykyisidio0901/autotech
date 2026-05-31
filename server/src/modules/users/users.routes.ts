@@ -25,7 +25,7 @@ router.get('/', async (req: AuthRequest, res, next) => {
       orderBy: { nome: 'asc' },
     })
     res.json(users)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.post('/', async (req: AuthRequest, res, next) => {
@@ -40,7 +40,7 @@ router.post('/', async (req: AuthRequest, res, next) => {
       select: { id: true, nome: true, email: true, role: true, telefone: true, cargo: true, ativo: true },
     })
     res.status(201).json(user)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.put('/:id', async (req: AuthRequest, res, next) => {
@@ -53,7 +53,7 @@ router.put('/:id', async (req: AuthRequest, res, next) => {
     })
     if (user.count === 0) throw new AppError('Usuário não encontrado', 404)
     res.json({ message: 'Usuário atualizado' })
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.delete('/:id', requireRole('admin'), async (req: AuthRequest, res, next) => {
@@ -64,7 +64,7 @@ router.delete('/:id', requireRole('admin'), async (req: AuthRequest, res, next) 
     })
     if (user.count === 0) throw new AppError('Usuário não encontrado', 404)
     res.json({ message: 'Usuário desativado' })
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 export default router

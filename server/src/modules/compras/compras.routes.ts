@@ -21,7 +21,7 @@ router.get('/', async (req: AuthRequest, res, next) => {
       orderBy: { data: 'desc' },
     })
     res.json(compras)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.post('/', async (req: AuthRequest, res, next) => {
@@ -31,7 +31,7 @@ router.post('/', async (req: AuthRequest, res, next) => {
       data: { ...data, data: data.data ? new Date(data.data) : new Date(), empresaId: req.empresaId! },
     })
     res.status(201).json(compra)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.delete('/:id', async (req: AuthRequest, res, next) => {
@@ -40,7 +40,7 @@ router.delete('/:id', async (req: AuthRequest, res, next) => {
       where: { id: Number(req.params.id), empresaId: req.empresaId },
     })
     res.json({ message: 'Compra removida' })
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 export default router

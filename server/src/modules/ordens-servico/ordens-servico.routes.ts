@@ -42,7 +42,7 @@ router.get('/', async (req: AuthRequest, res, next) => {
       orderBy: { createdAt: 'desc' },
     })
     res.json(ordens)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.get('/:id', async (req: AuthRequest, res, next) => {
@@ -53,7 +53,7 @@ router.get('/:id', async (req: AuthRequest, res, next) => {
     })
     if (!os) throw new AppError('Ordem de serviço não encontrada', 404)
     res.json(os)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.post('/', async (req: AuthRequest, res, next) => {
@@ -81,7 +81,7 @@ router.post('/', async (req: AuthRequest, res, next) => {
       include: { servicos: true, produtosOS: true } as any,
     })
     res.status(201).json(os)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.put('/:id', async (req: AuthRequest, res, next) => {
@@ -119,7 +119,7 @@ router.put('/:id', async (req: AuthRequest, res, next) => {
       include: { servicos: true, produtosOS: true } as any,
     })
     res.json(os)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 export default router

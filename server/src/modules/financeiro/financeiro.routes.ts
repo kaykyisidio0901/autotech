@@ -35,7 +35,7 @@ router.get('/receber', async (req: AuthRequest, res, next) => {
     if (status) where.status = status
     const contas = await prisma.contaReceber.findMany({ where, orderBy: { vencimento: 'asc' } })
     res.json(contas)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.post('/receber', async (req: AuthRequest, res, next) => {
@@ -45,7 +45,7 @@ router.post('/receber', async (req: AuthRequest, res, next) => {
       data: { ...data, vencimento: new Date(data.vencimento), empresaId: req.empresaId! },
     })
     res.status(201).json(conta)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.put('/receber/:id', async (req: AuthRequest, res, next) => {
@@ -59,7 +59,7 @@ router.put('/receber/:id', async (req: AuthRequest, res, next) => {
     })
     if (conta.count === 0) throw new AppError('Conta não encontrada', 404)
     res.json({ message: 'Conta atualizada' })
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.get('/pagar', async (req: AuthRequest, res, next) => {
@@ -72,7 +72,7 @@ router.get('/pagar', async (req: AuthRequest, res, next) => {
     if (status) where.status = status
     const contas = await prisma.contaPagar.findMany({ where, orderBy: { vencimento: 'asc' } })
     res.json(contas)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.post('/pagar', async (req: AuthRequest, res, next) => {
@@ -82,7 +82,7 @@ router.post('/pagar', async (req: AuthRequest, res, next) => {
       data: { ...data, vencimento: new Date(data.vencimento), empresaId: req.empresaId! },
     })
     res.status(201).json(conta)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.put('/pagar/:id', async (req: AuthRequest, res, next) => {
@@ -96,7 +96,7 @@ router.put('/pagar/:id', async (req: AuthRequest, res, next) => {
     })
     if (conta.count === 0) throw new AppError('Conta não encontrada', 404)
     res.json({ message: 'Conta atualizada' })
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.get('/resumo', async (req: AuthRequest, res, next) => {
@@ -127,7 +127,7 @@ router.get('/resumo', async (req: AuthRequest, res, next) => {
       contasReceber: contasRec,
       contasPagar: contasPag,
     })
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 export default router

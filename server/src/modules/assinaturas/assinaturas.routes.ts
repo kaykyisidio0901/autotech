@@ -32,7 +32,7 @@ router.get('/minha', async (req: AuthRequest, res, next) => {
         ? Math.max(0, Math.ceil((new Date(empresa.dataVencimento).getTime() - Date.now()) / 86400000))
         : 0,
     })
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.put('/upgrade', async (req: AuthRequest, res, next) => {
@@ -52,7 +52,7 @@ router.put('/upgrade', async (req: AuthRequest, res, next) => {
     })
 
     res.json({ message: `Plano alterado para ${PLANOS[planoId as keyof typeof PLANOS].nome}` })
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.get('/status', async (req: AuthRequest, res, next) => {
@@ -83,7 +83,7 @@ router.get('/status', async (req: AuthRequest, res, next) => {
       },
       bloqueado,
     })
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 export default router

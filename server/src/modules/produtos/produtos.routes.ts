@@ -44,7 +44,7 @@ router.get('/', async (req: AuthRequest, res, next) => {
       orderBy: { nome: 'asc' },
     })
     res.json(produtos)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.get('/:id', async (req: AuthRequest, res, next) => {
@@ -55,7 +55,7 @@ router.get('/:id', async (req: AuthRequest, res, next) => {
     })
     if (!produto) throw new AppError('Produto não encontrado', 404)
     res.json(produto)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.post('/', async (req: AuthRequest, res, next) => {
@@ -63,7 +63,7 @@ router.post('/', async (req: AuthRequest, res, next) => {
     const data = schema.parse(req.body)
     const produto = await prisma.produto.create({ data: { ...data, empresaId: req.empresaId! } })
     res.status(201).json(produto)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.put('/:id', async (req: AuthRequest, res, next) => {
@@ -75,7 +75,7 @@ router.put('/:id', async (req: AuthRequest, res, next) => {
     })
     if (produto.count === 0) throw new AppError('Produto não encontrado', 404)
     res.json({ message: 'Produto atualizado' })
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.delete('/:id', async (req: AuthRequest, res, next) => {
@@ -85,7 +85,7 @@ router.delete('/:id', async (req: AuthRequest, res, next) => {
     })
     if (produto.count === 0) throw new AppError('Produto não encontrado', 404)
     res.json({ message: 'Produto removido' })
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 export default router

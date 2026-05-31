@@ -45,7 +45,7 @@ router.get('/', async (req: AuthRequest, res, next) => {
       orderBy: { data: 'desc' },
     })
     res.json(vendas)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.get('/:id', async (req: AuthRequest, res, next) => {
@@ -56,7 +56,7 @@ router.get('/:id', async (req: AuthRequest, res, next) => {
     })
     if (!venda) throw new AppError('Venda não encontrada', 404)
     res.json(venda)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.post('/', async (req: AuthRequest, res, next) => {
@@ -98,7 +98,7 @@ router.post('/', async (req: AuthRequest, res, next) => {
     }
 
     res.status(201).json(venda)
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 router.put('/:id/cancel', async (req: AuthRequest, res, next) => {
@@ -124,7 +124,7 @@ router.put('/:id/cancel', async (req: AuthRequest, res, next) => {
     }
 
     res.json({ message: 'Venda cancelada' })
-  } catch (err) { next(err) }
+  } catch (err) { return next(err) }
 })
 
 export default router
