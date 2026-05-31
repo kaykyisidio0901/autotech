@@ -906,22 +906,11 @@ app.get('/api/assinaturas/status', authMiddleware, async (req: AuthRequest, res,
 // ==========================================================================
 // Error Handler
 // ==========================================================================
-app.get('/', (_req, res) => {
-  res.json({
-    name: 'AutoTech API',
-    version: '1.0.0',
-    docs: '/api-docs',
-    endpoints: {
-      ping: 'GET /api/ping',
-      health: 'GET /api/health',
-      auth: { login: 'POST /api/auth/login', register: 'POST /api/auth/register', me: 'GET /api/auth/me' },
-      clientes: 'GET/POST /api/clientes',
-      produtos: 'GET/POST /api/produtos',
-      veiculos: 'GET/POST /api/veiculos',
-      vendas: 'GET/POST /api/vendas',
-      dashboard: 'GET /api/dashboard',
-    },
-  })
+app.use(express.static('../dist'))
+
+const SPA_PATH = /^\/(?!api\/)/
+app.get(SPA_PATH, (_req, res) => {
+  res.sendFile('index.html', { root: '../dist' })
 })
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
