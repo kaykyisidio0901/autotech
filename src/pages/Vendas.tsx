@@ -1,11 +1,12 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
-import { mockVendas } from '../mock/vendas'
-import { mockProdutos } from '../mock/produtos'
+import { fetchVendas, cancelVenda } from '../services/vendas'
+import { fetchProdutos } from '../services/produtos'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import type { FormaPagamento, VendaStatus, Venda, Produto } from '../types'
 import { ReceiptModal } from '../components/receipt/ReceiptModal'
 
@@ -38,13 +39,12 @@ function formatCurrency(value: number) {
   return `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
 }
 
-let nextProdId = mockProdutos.length + 1
-
 export function Vendas() {
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
-  const [vendas, setVendas] = useState(mockVendas)
-  const [produtos, setProdutos] = useState(mockProdutos)
+  const [vendas, setVendas] = useState<Venda[]>([])
+  const [produtos, setProdutos] = useState<Produto[]>([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<VendaStatus | 'todas'>('todas')
   const [showModal, setShowModal] = useState(false)
@@ -63,6 +63,20 @@ export function Vendas() {
   const [criandoProduto, setCriandoProduto] = useState<number | null>(null)
 
   const canDiscount = user?.role === 'proprietario' || user?.role === 'gerente'
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true)
+      const [v, p] = await Promise.all([
+        fetchVendas(),
+        fetchProdutos(),
+      ])
+      setVendas(v)
+      setProdutos(p)
+      setLoading(false)
+    }
+    load()
+  }, [])
 
   const filtered = useMemo(() => {
     return vendas.filter((v) => {
@@ -101,7 +115,8 @@ export function Vendas() {
   function confirmarNovoProduto(index: number) {
     if (!novoProdutoNome.trim() || novoProdutoPreco <= 0) return
     const novo: Produto = {
-      id: nextProdId++, codigoInterno: '', codigoBarras: '', nome: novoProdutoNome.trim(),
+      id: Math.max(...produtos.map(p => p.id), 0) + 1,
+      codigoInterno: '', codigoBarras: '', nome: novoProdutoNome.trim(),
       categoria: '', marca: '', fornecedor: '', descricao: '',
       precoCusto: 0, precoVenda: novoProdutoPreco, quantidade: 0, estoqueMinimo: 0, status: true,
     }
@@ -163,6 +178,14 @@ export function Vendas() {
     setItens([{ produto: '', quantidade: 1, precoUnitario: 0 }])
     setCriandoProduto(null)
   }
+
+  const handleCancel = useCallback(async (id: number) => {
+    if (!window.confirm('Tem certeza que deseja cancelar esta venda?')) return
+    await cancelVenda(id)
+    setVendas(prev => prev.map(v => v.id === id ? { ...v, status: 'cancelada' } : v))
+  }, [])
+
+  if (loading) return <LoadingSpinner />
 
   return (
     <div className="space-y-6">
@@ -231,12 +254,22 @@ export function Vendas() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => setReceiptVenda(venda)}
-                      className="text-xs text-accent hover:text-accent-hover transition-colors cursor-pointer font-medium"
-                    >
-                      Comprovante
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => setReceiptVenda(venda)}
+                        className="text-xs text-accent hover:text-accent-hover transition-colors cursor-pointer font-medium"
+                      >
+                        Comprovante
+                      </button>
+                      {venda.status === 'concluida' && (
+                        <button
+                          onClick={() => handleCancel(venda.id)}
+                          className="text-xs text-red-400 hover:text-red-300 transition-colors cursor-pointer font-medium"
+                        >
+                          Cancelar
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

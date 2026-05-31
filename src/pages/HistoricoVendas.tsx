@@ -1,6 +1,5 @@
-import { useState, useMemo } from 'react'
-import { mockVendas } from '../mock/vendas'
-import { cancelVenda } from '../services/vendas'
+import { useState, useEffect, useMemo } from 'react'
+import { fetchVendas, cancelVenda } from '../services/vendas'
 import type { Venda, FormaPagamento, VendaStatus } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -8,6 +7,7 @@ import { Modal } from '../components/ui/Modal'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { BadgeStatus } from '../components/ui/BadgeStatus'
 import { Pagination } from '../components/ui/Pagination'
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { formatCurrency, formatDate } from '../utils/format'
 import { ReceiptModal } from '../components/receipt/ReceiptModal'
 
@@ -36,7 +36,7 @@ function getPeriodDates(period: PeriodFilter): [string, string] {
 }
 
 export function HistoricoVendas() {
-  const [vendas, setVendas] = useState(mockVendas)
+  const [vendas, setVendas] = useState<Venda[]>([])
   const [search, setSearch] = useState('')
   const [period, setPeriod] = useState<PeriodFilter>('mes')
   const [dateStart, setDateStart] = useState('')
@@ -45,7 +45,20 @@ export function HistoricoVendas() {
   const [receiptVenda, setReceiptVenda] = useState<Venda | null>(null)
   const [cancelTarget, setCancelTarget] = useState<number | null>(null)
   const [viewVenda, setViewVenda] = useState<Venda | null>(null)
+  const [loading, setLoading] = useState(true)
   const pageSize = 10
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const data = await fetchVendas()
+        setVendas(data)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
 
   const filtered = useMemo(() => {
     const [pdStart, pdEnd] = period === 'personalizado' ? [dateStart, dateEnd] : getPeriodDates(period)
@@ -62,6 +75,8 @@ export function HistoricoVendas() {
     await cancelVenda(id)
     setVendas((prev) => prev.map((v) => v.id === id ? { ...v, status: 'cancelada' as const } : v))
   }
+
+  if (loading) return <LoadingSpinner />
 
   return (
     <div className="space-y-6">

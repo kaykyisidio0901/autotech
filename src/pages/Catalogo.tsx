@@ -1,18 +1,20 @@
-import { useState, useMemo } from 'react'
-import { mockProdutos } from '../mock/produtos'
-import { mockCategorias } from '../mock/categorias'
-import type { Produto } from '../types'
+import { useState, useMemo, useEffect } from 'react'
+import { fetchProdutos } from '../services/produtos'
+import { fetchCategorias } from '../services/categorias'
+import type { Produto, Categoria } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { BadgeStatus } from '../components/ui/BadgeStatus'
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { formatCurrency } from '../utils/format'
 import { getProdutoImage, getProdutoGallery } from '../utils/produtoImagem'
 import { Search, Share2, Printer, Eye, SlidersHorizontal } from 'lucide-react'
 
-const marcas = [...new Set(mockProdutos.map(p => p.marca))].sort()
-
 export function Catalogo() {
+  const [produtos, setProdutos] = useState<Produto[]>([])
+  const [categorias, setCategorias] = useState<Categoria[]>([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [catFilter, setCatFilter] = useState('todas')
   const [marcaFilter, setMarcaFilter] = useState('todas')
@@ -21,8 +23,26 @@ export function Catalogo() {
   const [showFilters, setShowFilters] = useState(false)
   const [currentImg, setCurrentImg] = useState(0)
 
+  useEffect(() => {
+    async function load() {
+      try {
+        const [prods, cats] = await Promise.all([
+          fetchProdutos(),
+          fetchCategorias(),
+        ])
+        setProdutos(prods)
+        setCategorias(cats)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
+
+  const marcas = useMemo(() => [...new Set(produtos.map(p => p.marca))].sort(), [produtos])
+
   const filtered = useMemo(() => {
-    return mockProdutos.filter(p => {
+    return produtos.filter(p => {
       if (!p.status) return false
       if (search && !p.nome.toLowerCase().includes(search.toLowerCase()) && !p.marca.toLowerCase().includes(search.toLowerCase())) return false
       if (catFilter !== 'todas' && p.categoria !== catFilter) return false
@@ -30,7 +50,7 @@ export function Catalogo() {
       if (p.precoVenda < priceRange[0] || p.precoVenda > priceRange[1]) return false
       return true
     })
-  }, [search, catFilter, marcaFilter, priceRange])
+  }, [produtos, search, catFilter, marcaFilter, priceRange])
 
   function compartilhar(prod: Produto) {
     const text = `Confira ${prod.nome} - ${formatCurrency(prod.precoVenda)} na AutoTech!`
@@ -63,6 +83,8 @@ export function Catalogo() {
     win.print()
   }
 
+  if (loading) return <LoadingSpinner />
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -93,7 +115,7 @@ export function Catalogo() {
               <select value={catFilter} onChange={e => setCatFilter(e.target.value)}
                 className="px-3 py-2 rounded-lg bg-dark-800 border border-dark-600 text-gray-100 text-sm outline-none focus:border-accent">
                 <option value="todas">Todas</option>
-                {mockCategorias.filter(c => c.ativo).map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
+                {categorias.filter(c => c.ativo).map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
               </select>
             </div>
             <div className="flex flex-col gap-1.5">

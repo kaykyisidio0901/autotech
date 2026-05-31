@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react'
-import { mockContasReceber, mockContasPagar } from '../mock/financeiro'
-import { atualizarContaReceber, atualizarContaPagar } from '../services/financeiro'
+import { useState, useEffect, useMemo } from 'react'
+import { listarContasReceber, listarContasPagar, atualizarContaReceber, atualizarContaPagar } from '../services/financeiro'
 import type { ContaReceber, ContaPagar, ContaStatus } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { BadgeStatus } from '../components/ui/BadgeStatus'
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { formatCurrency, formatDate } from '../utils/format'
 import { useAuthStore } from '../stores/authStore'
 import { ArrowDownCircle, ArrowUpCircle, TrendingUp, DollarSign, Receipt } from 'lucide-react'
@@ -27,9 +27,26 @@ export function Financeiro() {
   const user = useAuthStore((s) => s.user)
   const canEdit = user?.role === 'proprietario' || user?.role === 'gerente'
   const [tab, setTab] = useState<Tab>('fluxo')
-  const [receber, setReceber] = useState(mockContasReceber)
-  const [pagar, setPagar] = useState(mockContasPagar)
+  const [receber, setReceber] = useState<ContaReceber[]>([])
+  const [pagar, setPagar] = useState<ContaPagar[]>([])
   const [filterStatus, setFilterStatus] = useState<ContaStatus | 'todas'>('todas')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [contasReceber, contasPagar] = await Promise.all([
+          listarContasReceber(),
+          listarContasPagar(),
+        ])
+        setReceber(contasReceber)
+        setPagar(contasPagar)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
 
   const fluxo = useMemo(() => {
     const totalRecebido = receber.filter(c => c.status === 'pago').reduce((s, c) => s + c.valor, 0)
@@ -58,6 +75,8 @@ export function Financeiro() {
     const updated = await atualizarContaPagar(conta.id, { status: 'pago' })
     if (updated) setPagar(prev => prev.map(c => c.id === updated.id ? updated : c))
   }
+
+  if (loading) return <LoadingSpinner />
 
   return (
     <div className="space-y-6">

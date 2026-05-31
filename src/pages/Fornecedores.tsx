@@ -1,6 +1,5 @@
-import { useState } from 'react'
-import { mockFornecedores } from '../mock/fornecedores'
-import { createFornecedor, updateFornecedor, deleteFornecedor } from '../services/fornecedores'
+import { useState, useEffect, useCallback } from 'react'
+import { fetchFornecedores, createFornecedor, updateFornecedor, deleteFornecedor } from '../services/fornecedores'
 import type { Fornecedor } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -9,6 +8,7 @@ import { Modal } from '../components/ui/Modal'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { BadgeStatus } from '../components/ui/BadgeStatus'
 import { Pagination } from '../components/ui/Pagination'
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { useAuthStore } from '../stores/authStore'
 
 const emptyForm = {
@@ -18,7 +18,8 @@ const emptyForm = {
 export function Fornecedores() {
   const user = useAuthStore((s) => s.user)
   const canEdit = user?.role === 'proprietario' || user?.role === 'gerente'
-  const [fornecedores, setFornecedores] = useState(mockFornecedores)
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [modalOpen, setModalOpen] = useState(false)
@@ -26,6 +27,18 @@ export function Fornecedores() {
   const [editing, setEditing] = useState<Fornecedor | null>(null)
   const [form, setForm] = useState(emptyForm)
   const pageSize = 5
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const data = await fetchFornecedores()
+        setFornecedores(data)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
 
   const filtered = fornecedores.filter(
     (f) =>
@@ -45,7 +58,7 @@ export function Fornecedores() {
     setModalOpen(true)
   }
 
-  async function handleSave() {
+  const handleSave = useCallback(async () => {
     if (!form.razaoSocial.trim() || !form.cnpj.trim()) return
     if (editing) {
       const updated = await updateFornecedor(editing.id, { ...form, ativo: editing.ativo })
@@ -55,12 +68,14 @@ export function Fornecedores() {
       setFornecedores((prev) => [...prev, created])
     }
     setModalOpen(false)
-  }
+  }, [form, editing])
 
-  async function handleDelete(id: number) {
+  const handleDelete = useCallback(async (id: number) => {
     await deleteFornecedor(id)
     setFornecedores((prev) => prev.filter((f) => f.id !== id))
-  }
+  }, [])
+
+  if (loading) return <LoadingSpinner />
 
   return (
     <div className="space-y-6">

@@ -1,14 +1,28 @@
-import { useState } from 'react'
-import { mockUsers } from '../mock/users'
+import { useState, useEffect } from 'react'
+import { api } from '../services/api'
+import type { User, UserRole } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { useAuthStore } from '../stores/authStore'
-import type { UserRole } from '../types'
 
 export function Users() {
   const currentUser = useAuthStore((s) => s.user)
-  const [users] = useState(mockUsers)
+  const [users, setUsers] = useState<User[]>([])
   const [showModal, setShowModal] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const data = await api.get<User[]>('/users')
+        setUsers(data)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
 
   const isOwner = currentUser?.role === 'proprietario'
 
@@ -29,6 +43,8 @@ export function Users() {
       </span>
     )
   }
+
+  if (loading) return <LoadingSpinner />
 
   return (
     <div className="space-y-6">

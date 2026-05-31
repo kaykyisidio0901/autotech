@@ -1,12 +1,26 @@
+import { useState, useEffect } from 'react'
 import { useSubscriptionStore } from '../stores/subscriptionStore'
-import { planos } from '../mock/planos'
 import { Card } from '../components/ui/Card'
 import { BadgeStatus } from '../components/ui/BadgeStatus'
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { formatCurrency } from '../utils/format'
 import { CreditCard, Download, FileText, Calendar } from 'lucide-react'
 
 export function CentralFaturamento() {
-  const { assinatura, pagamentos } = useSubscriptionStore()
+  const { assinatura, pagamentos, planos } = useSubscriptionStore()
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      const store = useSubscriptionStore.getState()
+      await Promise.all([store.fetchPlanos(), store.fetchMinhaAssinatura()])
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  if (loading || !assinatura) return <LoadingSpinner />
+
   const plano = planos.find(p => p.id === assinatura.planoId)
 
   const statusPagamento: Record<string, 'success' | 'warning' | 'danger'> = {

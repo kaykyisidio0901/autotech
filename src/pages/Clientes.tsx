@@ -1,16 +1,15 @@
-import { useState } from 'react'
-import { mockClientes } from '../mock/clientes'
-import { mockVeiculos } from '../mock/clientes'
-import { mockOrdensServico } from '../mock/ordensServico'
-import { mockProdutos } from '../mock/produtos'
-import { salvarCliente, atualizarCliente, excluirCliente, salvarVeiculo, consultarPlaca } from '../services/clientes'
-import type { Cliente } from '../types'
+import { useState, useEffect } from 'react'
+import { listarClientes, salvarCliente, atualizarCliente, excluirCliente, listarVeiculos, salvarVeiculo, consultarPlaca } from '../services/clientes'
+import { listarOrdensServico } from '../services/ordensServico'
+import { fetchProdutos } from '../services/produtos'
+import type { Cliente, Veiculo, OrdemServico, Produto } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Pagination } from '../components/ui/Pagination'
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { formatCurrency, formatDate } from '../utils/format'
 import { useAuthStore } from '../stores/authStore'
 import { Search, UserPlus, Car, History, ShoppingCart, Wrench } from 'lucide-react'
@@ -30,7 +29,9 @@ const estados = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG
 export function Clientes() {
   const user = useAuthStore((s) => s.user)
   const canEdit = user?.role === 'proprietario' || user?.role === 'gerente'
-  const [clientes, setClientes] = useState(mockClientes)
+  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [veiculos, setVeiculos] = useState<Record<number, Veiculo[]>>({})
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [modalOpen, setModalOpen] = useState(false)
@@ -38,16 +39,33 @@ export function Clientes() {
   const [editing, setEditing] = useState<Cliente | null>(null)
   const [form, setForm] = useState(emptyCliente)
 
-  // veiculo
   const [veiculoModalOpen, setVeiculoModalOpen] = useState(false)
   const [veiculoCliente, setVeiculoCliente] = useState<Cliente | null>(null)
   const [veiculoForm, setVeiculoForm] = useState(emptyVeiculo)
   const [consultando, setConsultando] = useState(false)
 
-  // historico
   const [historicoModal, setHistoricoModal] = useState<Cliente | null>(null)
+  const [historicoVendas, setHistoricoVendas] = useState<Produto[]>([])
+  const [historicoOrdens, setHistoricoOrdens] = useState<OrdemServico[]>([])
 
   const pageSize = 5
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true)
+      const c = await listarClientes()
+      setClientes(c)
+      const veicMap: Record<number, Veiculo[]> = {}
+      await Promise.all(c.map(async (cl) => {
+        const v = await listarVeiculos(cl.id)
+        if (v.length > 0) veicMap[cl.id] = v
+      }))
+      setVeiculos(veicMap)
+      setLoading(false)
+    }
+    load()
+  }, [])
+
   const filtered = clientes.filter(c =>
     c.nome.toLowerCase().includes(search.toLowerCase()) ||
     c.cpf.includes(search) ||
@@ -62,10 +80,10 @@ export function Clientes() {
   async function handleSave() {
     if (!form.nome.trim()) return
     if (editing) {
-      await atualizarCliente(editing.id, form)
-      setClientes(prev => prev.map(c => c.id === editing.id ? { ...c, ...form } : c))
+      const updated = await atualizarCliente(editing.id, form)
+      setClientes(prev => prev.map(c => c.id === editing.id ? { ...c, ...updated } : c))
     } else {
-      const created = await salvarCliente({ ...form, id: 0 } as any)
+      const created = await salvarCliente(form)
       setClientes(prev => [...prev, created])
     }
     setModalOpen(false)
@@ -90,8 +108,11 @@ export function Clientes() {
 
   async function handleSaveVeiculo() {
     if (!veiculoCliente || !veiculoForm.placa.trim()) return
-    const created = await salvarVeiculo({ ...veiculoForm, clienteId: veiculoCliente.id } as any)
-    mockVeiculos.push(created)
+    const created = await salvarVeiculo({ ...veiculoForm, clienteId: veiculoCliente.id })
+    setVeiculos(prev => ({
+      ...prev,
+      [veiculoCliente.id]: [...(prev[veiculoCliente.id] || []), created],
+    }))
     setVeiculoModalOpen(false)
     setVeiculoForm(emptyVeiculo)
   }
@@ -103,8 +124,20 @@ export function Clientes() {
   }
 
   function getVeiculos(clienteId: number) {
-    return mockVeiculos.filter(v => v.clienteId === clienteId)
+    return veiculos[clienteId] || []
   }
+
+  async function openHistorico(c: Cliente) {
+    setHistoricoModal(c)
+    const [vendasData, ordensData] = await Promise.all([
+      fetchProdutos(),
+      listarOrdensServico(),
+    ])
+    setHistoricoVendas(vendasData.filter(p => p.fornecedor === c.nome).slice(0, 3))
+    setHistoricoOrdens(ordensData.filter(os => os.clienteId === c.id))
+  }
+
+  if (loading) return <LoadingSpinner />
 
   return (
     <div className="space-y-6">
@@ -154,7 +187,7 @@ export function Clientes() {
                   <td className="py-3 px-2">
                     <div className="flex items-center justify-center gap-2">
                       <button onClick={() => openVeiculo(c)} className="text-gray-500 hover:text-blue-400 transition-colors cursor-pointer" title="Adicionar Veículo"><Car size={16} /></button>
-                      <button onClick={() => { setEditing(c); setHistoricoModal(c) }} className="text-gray-500 hover:text-accent transition-colors cursor-pointer" title="Histórico"><History size={16} /></button>
+                      <button onClick={() => openHistorico(c)} className="text-gray-500 hover:text-accent transition-colors cursor-pointer" title="Histórico"><History size={16} /></button>
                       <button onClick={() => openEdit(c)} className="text-gray-500 hover:text-blue-400 transition-colors cursor-pointer" title="Editar">✎</button>
                       <button onClick={() => setConfirmDelete(c.id)} className="text-gray-500 hover:text-red-400 transition-colors cursor-pointer" title="Excluir">✕</button>
                     </div>
@@ -239,38 +272,32 @@ export function Clientes() {
           <div className="space-y-6">
             <div>
               <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2"><ShoppingCart size={16} />Compras</h3>
-              {(() => {
-                const compras = mockProdutos.filter(p => p.fornecedor === historicoModal.nome).slice(0, 3)
-                return compras.length > 0 ? (
-                  <div className="space-y-2">
-                    {compras.map(p => (
-                      <div key={p.id} className="flex items-center justify-between py-2 px-3 bg-dark-700/50 rounded-lg">
-                        <span className="text-gray-300">{p.nome}</span>
-                        <span className="text-gray-400 text-sm">{formatCurrency(p.precoVenda)}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : <p className="text-gray-500 text-sm">Nenhuma compra registrada</p>
-              })()}
+              {historicoVendas.length > 0 ? (
+                <div className="space-y-2">
+                  {historicoVendas.map(p => (
+                    <div key={p.id} className="flex items-center justify-between py-2 px-3 bg-dark-700/50 rounded-lg">
+                      <span className="text-gray-300">{p.nome}</span>
+                      <span className="text-gray-400 text-sm">{formatCurrency(p.precoVenda)}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="text-gray-500 text-sm">Nenhuma compra registrada</p>}
             </div>
             <div>
               <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2"><Wrench size={16} />Serviços</h3>
-              {(() => {
-                const servicos = mockOrdensServico.filter(os => os.clienteId === historicoModal.id)
-                return servicos.length > 0 ? (
-                  <div className="space-y-2">
-                    {servicos.map(os => (
-                      <div key={os.id} className="flex items-center justify-between py-2 px-3 bg-dark-700/50 rounded-lg">
-                        <div>
-                          <span className="text-gray-300">{os.veiculoPlaca} — {os.numero}</span>
-                          <span className="text-gray-500 text-xs ml-2">{formatDate(os.dataEntrada)}</span>
-                        </div>
-                        <span className="text-gray-400 text-sm">{formatCurrency(os.valorFinal)}</span>
+              {historicoOrdens.length > 0 ? (
+                <div className="space-y-2">
+                  {historicoOrdens.map(os => (
+                    <div key={os.id} className="flex items-center justify-between py-2 px-3 bg-dark-700/50 rounded-lg">
+                      <div>
+                        <span className="text-gray-300">{os.veiculoPlaca} — {os.numero}</span>
+                        <span className="text-gray-500 text-xs ml-2">{formatDate(os.dataEntrada)}</span>
                       </div>
-                    ))}
-                  </div>
-                ) : <p className="text-gray-500 text-sm">Nenhum serviço realizado</p>
-              })()}
+                      <span className="text-gray-400 text-sm">{formatCurrency(os.valorFinal)}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="text-gray-500 text-sm">Nenhum serviço realizado</p>}
             </div>
           </div>
         )}

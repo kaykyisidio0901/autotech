@@ -1,17 +1,16 @@
-import { useState, useMemo } from 'react'
-import { mockOrdensServico } from '../mock/ordensServico'
-import { mockClientes } from '../mock/clientes'
-import { mockVeiculos } from '../mock/clientes'
-import { mockProdutos } from '../mock/produtos'
-import { mockUsers } from '../mock/users'
-import { salvarOrdemServico, atualizarOrdemServico } from '../services/ordensServico'
-import type { OrdemServico, OSStatus } from '../types'
+import { useState, useMemo, useEffect, useCallback } from 'react'
+import { listarOrdensServico, salvarOrdemServico, atualizarOrdemServico } from '../services/ordensServico'
+import { listarClientes } from '../services/clientes'
+import { fetchProdutos } from '../services/produtos'
+import { api } from '../services/api'
+import type { OrdemServico, OSStatus, Cliente, Veiculo, Produto, User } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import { BadgeStatus } from '../components/ui/BadgeStatus'
 import { Pagination } from '../components/ui/Pagination'
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { formatCurrency, formatDate } from '../utils/format'
 import { useAuthStore } from '../stores/authStore'
 import { Plus, Search } from 'lucide-react'
@@ -30,7 +29,12 @@ const emptyOSProduto = { nome: '', quantidade: 1, valor: 0 }
 export function OrdensServico() {
   const user = useAuthStore((s) => s.user)
   const canEdit = user?.role === 'proprietario' || user?.role === 'gerente'
-  const [ordens, setOrdens] = useState(mockOrdensServico)
+  const [ordens, setOrdens] = useState<OrdemServico[]>([])
+  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [veiculos, setVeiculos] = useState<Veiculo[]>([])
+  const [produtos, setProdutos] = useState<Produto[]>([])
+  const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<OSStatus | 'todas'>('todas')
   const [page, setPage] = useState(1)
@@ -49,7 +53,30 @@ export function OrdensServico() {
   const [novoServico, setNovoServico] = useState(emptyServico)
   const [novoProdutoOS, setNovoProdutoOS] = useState(emptyOSProduto)
 
-  const clientes = mockClientes
+  useEffect(() => {
+    async function load() {
+      setLoading(true)
+      const [o, c, p, u] = await Promise.all([
+        listarOrdensServico(),
+        listarClientes(),
+        fetchProdutos(),
+        api.get<User[]>('/users'),
+      ])
+      setOrdens(o)
+      setClientes(c)
+      setProdutos(p)
+      setUsers(u.filter(u => u.ativo))
+      const veicMap: Veiculo[] = []
+      await Promise.all(c.map(async (cl) => {
+        const { listarVeiculos } = await import('../services/clientes')
+        const v = await listarVeiculos(cl.id)
+        veicMap.push(...v)
+      }))
+      setVeiculos(veicMap)
+      setLoading(false)
+    }
+    load()
+  }, [])
 
   const filtered = useMemo(() => {
     let list = ordens
@@ -65,7 +92,7 @@ export function OrdensServico() {
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize)
 
   function getVeiculos(clienteId: number) {
-    return mockVeiculos.filter(v => v.clienteId === clienteId)
+    return veiculos.filter(v => v.clienteId === clienteId)
   }
 
   function openNew() {
@@ -101,8 +128,7 @@ export function OrdensServico() {
 
   function addProdutoOS() {
     if (!novoProdutoOS.nome.trim()) return
-    // look up price from mock
-    const prod = mockProdutos.find(p => p.nome.toLowerCase() === novoProdutoOS.nome.toLowerCase())
+    const prod = produtos.find(p => p.nome.toLowerCase() === novoProdutoOS.nome.toLowerCase())
     const val = prod ? prod.precoVenda : novoProdutoOS.valor
     setForm(p => ({
       ...p,
@@ -128,7 +154,7 @@ export function OrdensServico() {
     })
   }
 
-  async function handleSave() {
+  const handleSave = useCallback(async () => {
     if (!form.clienteId || !form.veiculoId) return
     const cliente = clientes.find(c => c.id === form.clienteId)
     const veiculo = getVeiculos(form.clienteId).find(v => v.id === form.veiculoId)
@@ -142,7 +168,7 @@ export function OrdensServico() {
       responsavel: form.responsavel, observacoes: form.observacoes,
       servicos: form.servicos, produtos: form.produtos,
       valorMaoObra: form.valorMaoObra, valorProdutos: form.valorProdutos,
-      desconto: form.desconto, valorFinal, status: form.status,
+      desconto: form.desconto, valorFinal, status: form.status as OSStatus,
     }
     if (editing) {
       const updated = await atualizarOrdemServico(editing.id, data)
@@ -152,7 +178,9 @@ export function OrdensServico() {
       setOrdens(prev => [...prev, created])
     }
     setModalOpen(false)
-  }
+  }, [form, editing, clientes, veiculos, ordens.length])
+
+  if (loading) return <LoadingSpinner />
 
   return (
     <div className="space-y-6">
@@ -227,7 +255,7 @@ export function OrdensServico() {
               <select value={form.responsavel} onChange={e => setForm(p => ({ ...p, responsavel: e.target.value }))}
                 className="px-3 py-2.5 rounded-lg bg-dark-800 border border-dark-600 text-gray-100 text-sm outline-none focus:border-accent">
                 <option value="">Selecione...</option>
-                {mockUsers.filter(u => u.ativo).map(u => (
+                {users.filter(u => u.ativo).map(u => (
                   <option key={u.id} value={u.nome}>{u.nome} — {u.role === 'proprietario' ? 'Proprietário' : u.role === 'gerente' ? 'Gerente' : 'Técnico'}</option>
                 ))}
               </select>

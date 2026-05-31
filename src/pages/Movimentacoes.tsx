@@ -1,13 +1,13 @@
-import { useState } from 'react'
-import { mockMovimentacoes } from '../mock/movimentacoes'
-import { mockProdutos } from '../mock/produtos'
-import { createMovimentacao } from '../services/estoque'
-import type { MovimentoTipo } from '../types'
+import { useState, useEffect, useCallback } from 'react'
+import { fetchMovimentacoes, createMovimentacao } from '../services/estoque'
+import { fetchProdutos } from '../services/produtos'
+import type { MovimentoTipo, MovimentacaoEstoque, Produto } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { BadgeStatus } from '../components/ui/BadgeStatus'
 import { Pagination } from '../components/ui/Pagination'
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { formatDate } from '../utils/format'
 import { useAuthStore } from '../stores/authStore'
 
@@ -16,22 +16,40 @@ const tipoVariant: Record<MovimentoTipo, 'success' | 'danger' | 'warning'> = { e
 
 export function Movimentacoes() {
   const user = useAuthStore((s) => s.user)
-  const [movs, setMovs] = useState(mockMovimentacoes)
+  const [movs, setMovs] = useState<MovimentacaoEstoque[]>([])
+  const [produtos, setProdutos] = useState<Produto[]>([])
+  const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [modalOpen, setModalOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [form, setForm] = useState({ produtoId: 0, tipo: 'entrada' as MovimentoTipo, quantidade: 1, observacao: '' })
   const pageSize = 10
 
+  useEffect(() => {
+    async function load() {
+      try {
+        const [movsData, prodsData] = await Promise.all([
+          fetchMovimentacoes(),
+          fetchProdutos(),
+        ])
+        setMovs(movsData)
+        setProdutos(prodsData)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
+
   const filtered = movs.filter(
     (m) => m.produtoNome.toLowerCase().includes(search.toLowerCase()) || m.tipo.toLowerCase().includes(search.toLowerCase()) || m.responsavel.toLowerCase().includes(search.toLowerCase())
   )
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize)
 
-  async function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.produtoId || form.quantidade <= 0) return
-    const prod = mockProdutos.find((p) => p.id === form.produtoId)
+    const prod = produtos.find((p) => p.id === form.produtoId)
     if (!prod) return
     const qtd = form.tipo === 'saida' ? form.quantidade : form.tipo === 'ajuste' ? form.quantidade : form.quantidade
     const mov = await createMovimentacao({
@@ -42,7 +60,9 @@ export function Movimentacoes() {
     setMovs((prev) => [mov, ...prev])
     setModalOpen(false)
     setForm({ produtoId: 0, tipo: 'entrada', quantidade: 1, observacao: '' })
-  }
+  }, [form, produtos, user])
+
+  if (loading) return <LoadingSpinner />
 
   return (
     <div className="space-y-6">
@@ -98,7 +118,7 @@ export function Movimentacoes() {
             <label className="text-sm font-medium text-gray-400">Produto</label>
             <select className="px-3 py-2.5 rounded-lg bg-dark-900 border border-dark-600 text-gray-100 text-sm outline-none focus:border-accent transition-all" value={form.produtoId} onChange={(e) => setForm({ ...form, produtoId: Number(e.target.value) })} required>
               <option value={0}>Selecione...</option>
-              {mockProdutos.filter((p) => p.status).map((p) => (
+              {produtos.filter((p) => p.status).map((p) => (
                 <option key={p.id} value={p.id}>{p.nome} (estoque: {p.quantidade})</option>
               ))}
             </select>

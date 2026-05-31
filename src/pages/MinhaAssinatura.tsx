@@ -1,8 +1,9 @@
+import { useState, useEffect } from 'react'
 import { useSubscriptionStore } from '../stores/subscriptionStore'
-import { planos } from '../mock/planos'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { BadgeStatus } from '../components/ui/BadgeStatus'
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { formatCurrency } from '../utils/format'
 import { Check, X, AlertTriangle, RefreshCw, Ban, Zap, ArrowUp } from 'lucide-react'
 
@@ -23,7 +24,20 @@ const statusLabel: Record<string, string> = {
 }
 
 export function MinhaAssinatura() {
-  const { assinatura, emTeste, cancelar, reativar, alternarRenovacao, diasRestantesAssinatura, diasRestantesTeste, notificacoes, marcarNotificacaoLida } = useSubscriptionStore()
+  const { assinatura, planos, emTeste, cancelar, reativar, alternarRenovacao, diasRestantesAssinatura, diasRestantesTeste, notificacoes, marcarNotificacaoLida } = useSubscriptionStore()
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      const store = useSubscriptionStore.getState()
+      await Promise.all([store.fetchPlanos(), store.fetchMinhaAssinatura()])
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  if (loading || !assinatura) return <LoadingSpinner />
+
   const plano = planos.find(p => p.id === assinatura.planoId)
   const restantes = emTeste || assinatura.status === 'teste' ? diasRestantesTeste() : diasRestantesAssinatura()
   const naoLidas = notificacoes.filter(n => !n.lida)

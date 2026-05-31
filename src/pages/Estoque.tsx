@@ -1,30 +1,51 @@
-import { useState, useMemo } from 'react'
-import { mockProdutos } from '../mock/produtos'
+import { useState, useMemo, useEffect } from 'react'
+import { fetchProdutos } from '../services/produtos'
+import { getIndicadores } from '../services/estoque'
+import type { Produto } from '../types'
 import { Card } from '../components/ui/Card'
 import { Pagination } from '../components/ui/Pagination'
 import { BadgeStatus } from '../components/ui/BadgeStatus'
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { formatCurrency, situacaoEstoque } from '../utils/format'
-import { getIndicadores } from '../services/estoque'
 
 export function Estoque() {
+  const [produtos, setProdutos] = useState<Produto[]>([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [situacaoFilter, setSituacaoFilter] = useState<string>('todas')
+  const [indicadores, setIndicadores] = useState({ total: 0, semEstoque: 0, estoqueBaixo: 0, valorTotal: 0 })
   const pageSize = 10
 
-  const indicadores = useMemo(() => getIndicadores(), [])
+  useEffect(() => {
+    async function load() {
+      try {
+        const [prods, inds] = await Promise.all([
+          fetchProdutos(),
+          getIndicadores(),
+        ])
+        setProdutos(prods)
+        setIndicadores(inds)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
 
   const filtered = useMemo(() => {
-    let list = mockProdutos.filter((p) => {
+    let list = produtos.filter((p) => {
       const matchSearch = p.nome.toLowerCase().includes(search.toLowerCase()) || p.categoria.toLowerCase().includes(search.toLowerCase())
       if (situacaoFilter === 'todas') return matchSearch
       const sit = situacaoEstoque(p.quantidade, p.estoqueMinimo)
       return matchSearch && sit.label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') === situacaoFilter
     })
     return list
-  }, [search, situacaoFilter])
+  }, [produtos, search, situacaoFilter])
 
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize)
+
+  if (loading) return <LoadingSpinner />
 
   return (
     <div className="space-y-6">

@@ -1,8 +1,10 @@
-import { useState, useMemo } from 'react'
-import { mockVendas } from '../mock/vendas'
-import { mockOrdensServico } from '../mock/ordensServico'
-import { mockContasPagar } from '../mock/financeiro'
+import { useState, useEffect, useMemo } from 'react'
+import { fetchVendas } from '../services/vendas'
+import { listarOrdensServico } from '../services/ordensServico'
+import { listarContasPagar } from '../services/financeiro'
+import type { Venda, OrdemServico, ContaPagar } from '../types'
 import { Card } from '../components/ui/Card'
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { formatCurrency, formatDate } from '../utils/format'
 import { BarChart, TrendingUp, DollarSign, Wrench } from 'lucide-react'
 
@@ -10,6 +12,28 @@ type Periodo = 'diario' | 'semanal' | 'mensal' | 'anual'
 
 export function Relatorios() {
   const [periodo, setPeriodo] = useState<Periodo>('diario')
+  const [vendas, setVendas] = useState<Venda[]>([])
+  const [ordens, setOrdens] = useState<OrdemServico[]>([])
+  const [contasPagar, setContasPagar] = useState<ContaPagar[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [v, o, c] = await Promise.all([
+          fetchVendas(),
+          listarOrdensServico(),
+          listarContasPagar(),
+        ])
+        setVendas(v)
+        setOrdens(o)
+        setContasPagar(c)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
 
   const relatorio = useMemo(() => {
     const hoje = new Date()
@@ -19,7 +43,7 @@ export function Relatorios() {
     const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
     const inicioAno = new Date(hoje.getFullYear(), 0, 1)
 
-    const vendasPeriodo = mockVendas.filter(v => {
+    const vendasPeriodo = vendas.filter(v => {
       if (v.status === 'cancelada') return false
       const d = new Date(v.data)
       if (periodo === 'diario') return v.data === hojeStr
@@ -28,7 +52,7 @@ export function Relatorios() {
       return d >= inicioAno
     })
 
-    const servicosPeriodo = mockOrdensServico.filter(os => {
+    const servicosPeriodo = ordens.filter(os => {
       const d = new Date(os.dataEntrada)
       if (periodo === 'diario') return os.dataEntrada === hojeStr
       if (periodo === 'semanal') return d >= inicioSemana && d <= fimSemana
@@ -48,14 +72,14 @@ export function Relatorios() {
     }))
     const maisVendidos = Object.entries(produtosVendidos).sort((a, b) => b[1].qtd - a[1].qtd).slice(0, 5)
 
-    const contasPagas = mockContasPagar.filter(c => c.status === 'pago').reduce((s, c) => s + c.valor, 0)
-    const contasPendentes = mockContasPagar.filter(c => c.status !== 'pago').reduce((s, c) => s + c.valor, 0)
+    const contasPagas = contasPagar.filter(c => c.status === 'pago').reduce((s, c) => s + c.valor, 0)
+    const contasPendentes = contasPagar.filter(c => c.status !== 'pago').reduce((s, c) => s + c.valor, 0)
     const despesas = contasPagas
 
     const dias = periodo === 'diario' ? 1 : periodo === 'semanal' ? 7 : periodo === 'mensal' ? 30 : 365
     const crescimento = receitaTotal > 0 ? (receitaTotal / dias) * 30 : 0
 
-    const vendasPorDia = mockVendas
+    const vendasPorDia = vendas
       .filter(v => new Date(v.data) >= inicioMes && v.status !== 'cancelada')
       .reduce<Record<string, number>>((acc, v) => {
         acc[v.data] = (acc[v.data] || 0) + v.total - v.desconto
@@ -67,7 +91,7 @@ export function Relatorios() {
       maisVendidos, contasPagas, contasPendentes, despesas, lucro: receitaTotal - despesas, crescimento,
       vendasPorDia: Object.entries(vendasPorDia).sort((a, b) => a[0].localeCompare(b[0])),
     }
-  }, [periodo])
+  }, [periodo, vendas, ordens, contasPagar])
 
   const periodos = [
     { value: 'diario' as Periodo, label: 'Diário' },
@@ -75,6 +99,8 @@ export function Relatorios() {
     { value: 'mensal' as Periodo, label: 'Mensal' },
     { value: 'anual' as Periodo, label: 'Anual' },
   ]
+
+  if (loading) return <LoadingSpinner />
 
   return (
     <div className="space-y-6">

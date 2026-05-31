@@ -1,35 +1,22 @@
-import { mockProdutos } from '../mock/produtos'
 import type { Produto } from '../types'
-
-const delay = (ms = 200) => new Promise((r) => setTimeout(r, ms))
+import { api } from './api'
 
 export async function fetchProdutos(): Promise<Produto[]> {
-  await delay()
-  return [...mockProdutos]
+  return api.get<Produto[]>('/produtos')
 }
 
 export async function fetchProduto(id: number): Promise<Produto | undefined> {
-  await delay()
-  return mockProdutos.find((p) => p.id === id)
+  return api.get<Produto>(`/produtos/${id}`)
 }
 
 export async function createProduto(data: Omit<Produto, 'id'>): Promise<Produto> {
-  await delay()
-  const novo = { ...data, id: Math.max(...mockProdutos.map((p) => p.id)) + 1 }
-  mockProdutos.push(novo)
-  return novo
+  return api.post<Produto>('/produtos', data)
 }
 
 export async function updateProduto(id: number, data: Partial<Produto>): Promise<Produto> {
-  await delay()
-  const idx = mockProdutos.findIndex((p) => p.id === id)
-  if (idx === -1) throw new Error('Produto não encontrado')
-  mockProdutos[idx] = { ...mockProdutos[idx], ...data }
-  return mockProdutos[idx]
+  return api.put<Produto>(`/produtos/${id}`, data)
 }
 
 export async function deleteProduto(id: number): Promise<void> {
-  await delay()
-  const idx = mockProdutos.findIndex((p) => p.id === id)
-  if (idx !== -1) mockProdutos.splice(idx, 1)
+  await api.delete(`/produtos/${id}`)
 }

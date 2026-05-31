@@ -1,6 +1,5 @@
-import { useState } from 'react'
-import { mockCategorias } from '../mock/categorias'
-import { createCategoria, updateCategoria, deleteCategoria } from '../services/categorias'
+import { useState, useEffect, useCallback } from 'react'
+import { fetchCategorias, createCategoria, updateCategoria, deleteCategoria } from '../services/categorias'
 import type { Categoria } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -8,17 +7,31 @@ import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { BadgeStatus } from '../components/ui/BadgeStatus'
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { useAuthStore } from '../stores/authStore'
 
 export function Categorias() {
   const user = useAuthStore((s) => s.user)
   const canEdit = user?.role === 'proprietario' || user?.role === 'gerente'
-  const [categorias, setCategorias] = useState(mockCategorias)
+  const [categorias, setCategorias] = useState<Categoria[]>([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null)
   const [editing, setEditing] = useState<Categoria | null>(null)
   const [form, setForm] = useState({ nome: '', descricao: '' })
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const data = await fetchCategorias()
+        setCategorias(data)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
 
   const filtered = categorias.filter(
     (c) => c.nome.toLowerCase().includes(search.toLowerCase()) || c.descricao.toLowerCase().includes(search.toLowerCase())
@@ -36,7 +49,7 @@ export function Categorias() {
     setModalOpen(true)
   }
 
-  async function handleSave() {
+  const handleSave = useCallback(async () => {
     if (!form.nome.trim()) return
     if (editing) {
       const updated = await updateCategoria(editing.id, { ...form, ativo: editing.ativo })
@@ -46,12 +59,14 @@ export function Categorias() {
       setCategorias((prev) => [...prev, created])
     }
     setModalOpen(false)
-  }
+  }, [form, editing])
 
-  async function handleDelete(id: number) {
+  const handleDelete = useCallback(async (id: number) => {
     await deleteCategoria(id)
     setCategorias((prev) => prev.filter((c) => c.id !== id))
-  }
+  }, [])
+
+  if (loading) return <LoadingSpinner />
 
   return (
     <div className="space-y-6">

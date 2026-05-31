@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSubscriptionStore } from '../stores/subscriptionStore'
-import { planos } from '../mock/planos'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { formatCurrency } from '../utils/format'
 import { Check, X, Star, Zap, Shield, TrendingDown } from 'lucide-react'
 
@@ -38,9 +38,21 @@ const todasFuncionalidades = [
 const icones = { basic: Star, medium: Zap, pro: Shield }
 
 export function Upgrade() {
-  const { assinatura, upgrade, emTeste } = useSubscriptionStore()
+  const { assinatura, planos, upgrade, emTeste } = useSubscriptionStore()
   const [ciclo, setCiclo] = useState<'mensal' | 'anual'>('mensal')
   const [confirmOpen, setConfirmOpen] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      const store = useSubscriptionStore.getState()
+      await Promise.all([store.fetchPlanos(), store.fetchMinhaAssinatura()])
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  if (loading || !assinatura) return <LoadingSpinner />
 
   const planosExibir = planos.filter(p => {
     if (emTeste || assinatura.status === 'teste') return true
@@ -132,7 +144,6 @@ export function Upgrade() {
                 {planosExibir.map(p => {
                   const has = p.features[key]
 
-                  // Check if previous plan didn't have this feature
                   const ordemP = ['basic', 'medium', 'pro']
                   const idx = ordemP.indexOf(p.id)
                   const prevPlan = idx > 0 ? planos.find(pp => pp.id === ordemP[idx - 1]) : null

@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useDashboardStore } from '../stores/dashboardStore'
 import { StatCard } from '../components/ui/StatCard'
 import { Card } from '../components/ui/Card'
@@ -5,8 +6,9 @@ import { MockChart } from '../components/charts/MockChart'
 import { DollarSign, TrendingUp, Package, Wrench, Users } from 'lucide-react'
 
 export function Dashboard() {
-  const { vendasDia, vendasMes, produtosEstoque, ordensServico, clientes, vendasSemana } =
+  const { vendasDia, vendasMes, produtosEstoque, ordensServico, clientes, vendasSemana, fetch: fetchDashboard } =
     useDashboardStore()
+  useEffect(() => { fetchDashboard() }, [fetchDashboard])
 
   return (
     <div className="space-y-6">

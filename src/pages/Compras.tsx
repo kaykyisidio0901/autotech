@@ -1,19 +1,37 @@
-import { useState } from 'react'
-import { mockCompras, mockNotasFiscais } from '../mock/notasFiscais'
-import type { NotaFiscal } from '../types'
+import { useState, useEffect } from 'react'
+import { listarCompras, listarNotasFiscais } from '../services/notasFiscais'
+import type { Compra, NotaFiscal } from '../types'
 import { Card } from '../components/ui/Card'
 import { Modal } from '../components/ui/Modal'
 import { Pagination } from '../components/ui/Pagination'
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { formatCurrency, formatDate } from '../utils/format'
 import { Search, Eye, FileText, Printer } from 'lucide-react'
 
 export function Compras() {
-  const [compras] = useState(mockCompras)
-  const [notasFiscais] = useState(mockNotasFiscais)
+  const [compras, setCompras] = useState<Compra[]>([])
+  const [notasFiscais, setNotasFiscais] = useState<NotaFiscal[]>([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [detailNota, setDetailNota] = useState<NotaFiscal | null>(null)
   const pageSize = 5
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [comprasData, notasData] = await Promise.all([
+          listarCompras(),
+          listarNotasFiscais(),
+        ])
+        setCompras(comprasData)
+        setNotasFiscais(notasData)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
 
   const filtered = compras.filter(c =>
     c.numeroNfe.toLowerCase().includes(search.toLowerCase()) ||
@@ -24,6 +42,8 @@ export function Compras() {
   function getNota(numeroNfe: string) {
     return notasFiscais.find(n => n.numero === numeroNfe) || null
   }
+
+  if (loading) return <LoadingSpinner />
 
   return (
     <div className="space-y-6">

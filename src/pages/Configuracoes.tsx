@@ -1,12 +1,12 @@
-import { useState, useRef } from 'react'
-import { mockDadosEmpresa, mockDadosFiscais, mockComissoes, mockOficinaConfig, mockImpressaoConfig, mockMensagensWhatsApp, mockBackupConfig, mockDashboardWidgets, mockLicencaInfo, estadosBr, regimesTributarios } from '../mock/configuracoes'
-import { mockUsers } from '../mock/users'
-import type { User, ComissaoConfig, MensagemWhatsApp } from '../types'
+import { useState, useEffect, useRef } from 'react'
+import { api } from '../services/api'
+import type { User, ComissaoConfig, MensagemWhatsApp, DadosEmpresa, DadosFiscais, OficinaConfig, ImpressaoConfig, BackupConfig, DashboardWidget, LicencaInfo } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import { BadgeStatus } from '../components/ui/BadgeStatus'
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { formatCurrency } from '../utils/format'
 import { useAuthStore } from '../stores/authStore'
 import {
@@ -16,6 +16,15 @@ import {
   Upload, Eye, Download, ToggleLeft, Check,
   X, Plus, Trash2,
 } from 'lucide-react'
+
+const estadosBr = [
+  'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG',
+  'PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO',
+]
+
+const regimesTributarios = [
+  'Simples Nacional', 'Lucro Presumido', 'Lucro Real', 'MEI',
+]
 
 const tabs = [
   { id: 'empresa', label: 'Dados da Empresa', icon: <Building2 size={18} /> },
@@ -35,9 +44,32 @@ export function Configuracoes() {
   const isOwner = user?.role === 'proprietario'
   const [activeTab, setActiveTab] = useState('empresa')
   const [saved, setSaved] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  const emptyDadosEmpresa: DadosEmpresa = {
+    razaoSocial: '', nomeFantasia: '', cnpj: '', ie: '', telefone: '', whatsapp: '',
+    email: '', site: '', cep: '', endereco: '', numero: '', bairro: '', cidade: '',
+    estado: 'SP', logo: null, logoReduzida: null, favicon: null,
+  }
+
+  const emptyDadosFiscais: DadosFiscais = {
+    regimeTributario: 'Simples Nacional', cnae: '', inscricaoMunicipal: '', serieNotaFiscal: '1', ambienteFiscal: 'homologacao',
+  }
+
+  const emptyOficinaConfig: OficinaConfig = {
+    tempoMedioServicos: 60, garantiaPadrao: 90, mensagemPadraoOS: '', observacoesAutomaticas: '', tecnicos: [],
+  }
+
+  const emptyImpressaoConfig: ImpressaoConfig = {
+    cabecalho: '', rodape: '', aplicarEm: { os: true, orcamentos: true, relatorios: true, comprovantes: true },
+  }
+
+  const emptyBackupConfig: BackupConfig = {
+    frequencia: 'manual', ultimoBackup: '', tamanho: '', ativo: true,
+  }
 
   // --- Dados da Empresa ---
-  const [empresa, setEmpresa] = useState({ ...mockDadosEmpresa })
+  const [empresa, setEmpresa] = useState<DadosEmpresa>(emptyDadosEmpresa)
   const logoRef = useRef<HTMLInputElement>(null)
   const logoSmallRef = useRef<HTMLInputElement>(null)
   const faviconRef = useRef<HTMLInputElement>(null)
@@ -54,11 +86,11 @@ export function Configuracoes() {
   }
 
   // --- Dados Fiscais ---
-  const [fiscal, setFiscal] = useState({ ...mockDadosFiscais })
+  const [fiscal, setFiscal] = useState<DadosFiscais>(emptyDadosFiscais)
 
   // --- Usuários ---
   const emptyUserForm = { nome: '', email: '', telefone: '', cargo: '', senha: '', role: 'funcionario' as User['role'] }
-  const [users, setUsers] = useState(mockUsers)
+  const [users, setUsers] = useState<User[]>([])
   const [userModal, setUserModal] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [userForm, setUserForm] = useState(emptyUserForm)
@@ -76,30 +108,59 @@ export function Configuracoes() {
   }
 
   // --- Comissões ---
-  const [comissoes, setComissoes] = useState<ComissaoConfig[]>(mockComissoes)
+  const [comissoes, setComissoes] = useState<ComissaoConfig[]>([])
   const [comModal, setComModal] = useState(false)
   const [comForm, setComForm] = useState<ComissaoConfig>({ funcionarioId: 0, nome: '', percentual: 0, tipo: 'venda' })
 
   // --- Oficina ---
-  const [oficina, setOficina] = useState({ ...mockOficinaConfig })
+  const [oficina, setOficina] = useState<OficinaConfig>(emptyOficinaConfig)
   const [novoTecnico, setNovoTecnico] = useState('')
 
   // --- Impressão ---
-  const [impressao, setImpressao] = useState({ ...mockImpressaoConfig })
+  const [impressao, setImpressao] = useState<ImpressaoConfig>(emptyImpressaoConfig)
 
   // --- WhatsApp ---
-  const [mensagens, setMensagens] = useState<MensagemWhatsApp[]>(mockMensagensWhatsApp)
+  const [mensagens, setMensagens] = useState<MensagemWhatsApp[]>([])
   const [editMsg, setEditMsg] = useState<MensagemWhatsApp | null>(null)
   const [msgForm, setMsgForm] = useState({ titulo: '', mensagem: '' })
 
   // --- Backup ---
-  const [backup, setBackup] = useState({ ...mockBackupConfig })
+  const [backup, setBackup] = useState<BackupConfig>(emptyBackupConfig)
 
   // --- Dashboard Widgets ---
-  const [widgets, setWidgets] = useState(mockDashboardWidgets)
+  const [widgets, setWidgets] = useState<DashboardWidget[]>([])
 
   // --- Licença ---
-  const [licenca] = useState({ ...mockLicencaInfo })
+  const [licenca, setLicenca] = useState<LicencaInfo>({
+    plano: '', dataVencimento: '', status: 'ativa', historicoPagamentos: [],
+  })
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [empresaData, configData, usersData] = await Promise.all([
+          api.get<any>('/api/empresa'),
+          api.get<any>('/api/configuracoes'),
+          api.get<User[]>('/users'),
+        ])
+        if (empresaData) setEmpresa({ ...emptyDadosEmpresa, ...empresaData })
+        if (configData) {
+          if (configData.fiscais) setFiscal({ ...emptyDadosFiscais, ...configData.fiscais })
+          if (configData.comissoes) setComissoes(configData.comissoes)
+          if (configData.oficina) setOficina({ ...emptyOficinaConfig, ...configData.oficina })
+          if (configData.impressao) setImpressao({ ...emptyImpressaoConfig, ...configData.impressao })
+          if (configData.mensagens) setMensagens(configData.mensagens)
+          if (configData.backup) setBackup({ ...emptyBackupConfig, ...configData.backup })
+          if (configData.widgets) setWidgets(configData.widgets)
+          if (configData.licenca) setLicenca(configData.licenca)
+        }
+        if (usersData) setUsers(usersData)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
 
   // --- Simulação comissão ---
   const [simVendas, setSimVendas] = useState(10000)
@@ -176,6 +237,8 @@ export function Configuracoes() {
       tamanho: `${(45 + Math.random() * 10).toFixed(1)} MB`,
     }))
   }
+
+  if (loading) return <LoadingSpinner />
 
   return (
     <div className="space-y-6">

@@ -1,16 +1,17 @@
-import { useState, useMemo, useRef } from 'react'
-import { mockProdutos } from '../mock/produtos'
-import { mockClientes } from '../mock/clientes'
-import { mockUsers } from '../mock/users'
-import { mockVendas } from '../mock/vendas'
+import { useState, useMemo, useCallback, useEffect } from 'react'
+import { fetchProdutos } from '../services/produtos'
+import { listarClientes } from '../services/clientes'
+import { createVenda } from '../services/vendas'
+import { api } from '../services/api'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { BadgeStatus } from '../components/ui/BadgeStatus'
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { formatCurrency } from '../utils/format'
 import { getProdutoImage } from '../utils/produtoImagem'
 import { useAuthStore } from '../stores/authStore'
-import type { FormaPagamento, Venda, Cliente } from '../types'
+import type { FormaPagamento, Venda, Cliente, Produto, User } from '../types'
 import { Printer, Search, X } from 'lucide-react'
 
 interface CartItem {
@@ -30,6 +31,12 @@ export function PDV() {
   const user = useAuthStore((s) => s.user)
   const canDiscount = user?.role === 'proprietario' || user?.role === 'gerente'
 
+  const [produtos, setProdutos] = useState<Produto[]>([])
+  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [funcionarios, setFuncionarios] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+
   const [search, setSearch] = useState('')
   const [cart, setCart] = useState<CartItem[]>([])
   const [desconto, setDesconto] = useState(0)
@@ -41,26 +48,39 @@ export function PDV() {
   const [clienteSearch, setClienteSearch] = useState('')
   const [showClienteSearch, setShowClienteSearch] = useState(false)
   const [vendedorId, setVendedorId] = useState(user?.id ?? 0)
-  const cupomRef = useRef<HTMLDivElement>(null)
 
-  const funcionarios = useMemo(() => mockUsers.filter(u => u.ativo), [])
+  useEffect(() => {
+    async function load() {
+      setLoading(true)
+      const [p, c, u] = await Promise.all([
+        fetchProdutos(),
+        listarClientes(),
+        api.get<User[]>('/users'),
+      ])
+      setProdutos(p.filter(p => p.status))
+      setClientes(c)
+      setFuncionarios(u.filter(u => u.ativo))
+      setLoading(false)
+    }
+    load()
+  }, [])
 
   const produtosFiltrados = useMemo(() => {
-    return mockProdutos.filter(
-      (p) => p.status && (p.nome.toLowerCase().includes(search.toLowerCase()) || p.categoria.toLowerCase().includes(search.toLowerCase()) || p.marca.toLowerCase().includes(search.toLowerCase()))
+    return produtos.filter(
+      (p) => p.nome.toLowerCase().includes(search.toLowerCase()) || p.categoria.toLowerCase().includes(search.toLowerCase()) || p.marca.toLowerCase().includes(search.toLowerCase())
     )
-  }, [search])
+  }, [search, produtos])
 
   const clientesFiltrados = useMemo(() => {
-    if (!clienteSearch) return mockClientes
-    return mockClientes.filter(c => c.nome.toLowerCase().includes(clienteSearch.toLowerCase()) || c.cpf.includes(clienteSearch))
-  }, [clienteSearch])
+    if (!clienteSearch) return clientes
+    return clientes.filter(c => c.nome.toLowerCase().includes(clienteSearch.toLowerCase()) || c.cpf.includes(clienteSearch))
+  }, [clienteSearch, clientes])
 
   const subtotal = useMemo(() => cart.reduce((acc, item) => acc + item.quantidade * item.precoUnitario, 0), [cart])
   const total = Math.max(0, subtotal - desconto)
 
   function addToCart(produtoId: number) {
-    const prod = mockProdutos.find((p) => p.id === produtoId)
+    const prod = produtos.find((p) => p.id === produtoId)
     if (!prod) return
     setCart((prev) => {
       const exist = prev.find((i) => i.produtoId === produtoId)
@@ -100,6 +120,42 @@ export function PDV() {
   function gerarCupom(venda: Venda) {
     setUltimaVenda(venda)
     setShowCupom(true)
+  }
+
+  const finalizarVenda = useCallback(async () => {
+    const vendedor = funcionarios.find(f => f.id === vendedorId) || user
+    const itens = cart.map((i) => ({ produto: i.nome, quantidade: i.quantidade, precoUnitario: i.precoUnitario }))
+    setSubmitting(true)
+    try {
+      const nova = await createVenda({
+        cliente: cliente?.nome || 'Consumidor Final',
+        itens,
+        total,
+        desconto,
+        formaPagamento: pagamentos.length === 1 ? pagamentos[0].tipo : 'cartao_credito',
+        parcelas: pagamentos.length === 1 ? pagamentos[0].parcelas : 1,
+        status: 'concluida',
+        vendedor: vendedor?.nome ?? 'Sistema',
+        data: new Date().toISOString().split('T')[0],
+      })
+      gerarCupom(nova)
+      limparCarrinho()
+      setShowPagamento(false)
+    } finally {
+      setSubmitting(false)
+    }
+  }, [cart, cliente, total, desconto, pagamentos, funcionarios, vendedorId, user])
+
+  function addPagamento() {
+    setPagamentos((prev) => [...prev, { tipo: 'dinheiro', valor: 0, parcelas: 1 }])
+  }
+
+  function removePagamento(index: number) {
+    setPagamentos((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  function updatePagamento(index: number, data: Partial<Pagamento>) {
+    setPagamentos((prev) => prev.map((p, i) => i === index ? { ...p, ...data } : p))
   }
 
   function imprimirCupom() {
@@ -148,38 +204,7 @@ export function PDV() {
     win.print()
   }
 
-  function finalizarVenda() {
-    const vendedor = funcionarios.find(f => f.id === vendedorId) || user
-    const itens = cart.map((i) => ({ produto: i.nome, quantidade: i.quantidade, precoUnitario: i.precoUnitario }))
-    const nova: Venda = {
-      id: Math.max(...mockVendas.map((v) => v.id), 0) + 1,
-      cliente: cliente?.nome || 'Consumidor Final',
-      itens,
-      total,
-      desconto,
-      formaPagamento: pagamentos.length === 1 ? pagamentos[0].tipo : 'cartao_credito',
-      parcelas: pagamentos.length === 1 ? pagamentos[0].parcelas : 1,
-      status: 'concluida',
-      vendedor: vendedor?.nome ?? 'Sistema',
-      data: new Date().toISOString().split('T')[0],
-    }
-    mockVendas.push(nova)
-    gerarCupom(nova)
-    limparCarrinho()
-    setShowPagamento(false)
-  }
-
-  function addPagamento() {
-    setPagamentos((prev) => [...prev, { tipo: 'dinheiro', valor: 0, parcelas: 1 }])
-  }
-
-  function removePagamento(index: number) {
-    setPagamentos((prev) => prev.filter((_, i) => i !== index))
-  }
-
-  function updatePagamento(index: number, data: Partial<Pagamento>) {
-    setPagamentos((prev) => prev.map((p, i) => i === index ? { ...p, ...data } : p))
-  }
+  if (loading) return <LoadingSpinner />
 
   return (
     <div className="space-y-6">
@@ -413,8 +438,8 @@ export function PDV() {
 
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="ghost" onClick={() => setShowPagamento(false)}>Cancelar</Button>
-            <Button onClick={finalizarVenda} disabled={totalPago() < total || cart.length === 0}>
-              Confirmar Venda
+            <Button onClick={finalizarVenda} disabled={totalPago() < total || cart.length === 0 || submitting}>
+              {submitting ? 'Salvando...' : 'Confirmar Venda'}
             </Button>
           </div>
         </div>
@@ -458,7 +483,7 @@ export function PDV() {
       <Modal open={showCupom} onClose={() => setShowCupom(false)} title="Venda Realizada" size="sm">
         {ultimaVenda && (
           <div className="space-y-4">
-            <div className="bg-dark-900 rounded-xl p-4 text-sm font-mono" ref={cupomRef}>
+            <div className="bg-dark-900 rounded-xl p-4 text-sm font-mono">
               <div className="text-center mb-3 border-b border-dashed border-dark-600 pb-3">
                 <p className="font-bold text-gray-100">AutoTech Manager</p>
                 <p className="text-xs text-gray-500">CNPJ: 00.000.000/0000-00</p>

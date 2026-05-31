@@ -8,6 +8,7 @@ export function Login() {
   const navigate = useNavigate()
   const login = useAuthStore((s) => s.login)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const loading = useAuthStore((s) => s.loading)
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -17,7 +18,7 @@ export function Login() {
     return <Navigate to="/dashboard" replace />
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
 
@@ -26,11 +27,11 @@ export function Login() {
       return
     }
 
-    const success = login(email, password)
-    if (success) {
+    try {
+      await login(email, password)
       navigate('/dashboard', { replace: true })
-    } else {
-      setError('E-mail ou senha inválidos.')
+    } catch (err: any) {
+      setError(err.message || 'E-mail ou senha inválidos.')
     }
   }
 
@@ -67,8 +68,8 @@ export function Login() {
             <p className="text-sm text-red-400 text-center">{error}</p>
           )}
 
-          <Button type="submit" fullWidth>
-            Entrar
+          <Button type="submit" fullWidth disabled={loading}>
+            {loading ? 'Entrando...' : 'Entrar'}
           </Button>
 
           <button
@@ -79,7 +80,6 @@ export function Login() {
             Recuperar Senha
           </button>
         </form>
-
 
       </div>
     </div>

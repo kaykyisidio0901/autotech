@@ -1,9 +1,8 @@
-import { useState, useMemo, useRef } from 'react'
-import { mockProdutos } from '../mock/produtos'
-import { mockCategorias } from '../mock/categorias'
-import { mockFornecedores } from '../mock/fornecedores'
-import { createProduto, updateProduto, deleteProduto } from '../services/produtos'
-import type { Produto } from '../types'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import { fetchProdutos, createProduto, updateProduto, deleteProduto } from '../services/produtos'
+import { fetchCategorias } from '../services/categorias'
+import { fetchFornecedores } from '../services/fornecedores'
+import type { Produto, Categoria, Fornecedor } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -11,6 +10,7 @@ import { Modal } from '../components/ui/Modal'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { BadgeStatus } from '../components/ui/BadgeStatus'
 import { Pagination } from '../components/ui/Pagination'
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { formatCurrency } from '../utils/format'
 import { getProdutoImage, getProdutoGallery } from '../utils/produtoImagem'
 import { useAuthStore } from '../stores/authStore'
@@ -28,7 +28,10 @@ type ViewMode = 'table' | 'grid'
 export function Produtos() {
   const user = useAuthStore((s) => s.user)
   const canEdit = user?.role === 'proprietario' || user?.role === 'gerente'
-  const [produtos, setProdutos] = useState(mockProdutos)
+  const [produtos, setProdutos] = useState<Produto[]>([])
+  const [categorias, setCategorias] = useState<Categoria[]>([])
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [catFilter, setCatFilter] = useState('todas')
   const [sortKey, setSortKey] = useState<SortKey>('nome')
@@ -45,6 +48,24 @@ export function Produtos() {
   const [previewProd, setPreviewProd] = useState<Produto | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const pageSize = 10
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [prods, cats, fors] = await Promise.all([
+          fetchProdutos(),
+          fetchCategorias(),
+          fetchFornecedores(),
+        ])
+        setProdutos(prods)
+        setCategorias(cats)
+        setFornecedores(fors)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
 
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
@@ -83,7 +104,7 @@ export function Produtos() {
     setModalOpen(true)
   }
 
-  async function handleSave() {
+  const handleSave = useCallback(async () => {
     if (!form.nome.trim()) return
     if (editing) {
       const updated = await updateProduto(editing.id, form)
@@ -93,12 +114,12 @@ export function Produtos() {
       setProdutos((prev) => [...prev, created])
     }
     setModalOpen(false)
-  }
+  }, [form, editing])
 
-  async function handleDelete(id: number) {
+  const handleDelete = useCallback(async (id: number) => {
     await deleteProduto(id)
     setProdutos((prev) => prev.filter((p) => p.id !== id))
-  }
+  }, [])
 
   function handleImageUrl() {
     const url = imageUrlInput.trim()
@@ -121,6 +142,8 @@ export function Produtos() {
   }
 
   const sortIndicator = (key: SortKey) => sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''
+
+  if (loading) return <LoadingSpinner />
 
   return (
     <div className="space-y-6">
@@ -154,7 +177,7 @@ export function Produtos() {
           onChange={(e) => { setCatFilter(e.target.value); setPage(1) }}
         >
           <option value="todas">Todas as categorias</option>
-          {mockCategorias.filter((c) => c.ativo).map((c) => (
+          {categorias.filter((c) => c.ativo).map((c) => (
             <option key={c.id} value={c.nome}>{c.nome}</option>
           ))}
         </select>
@@ -276,14 +299,14 @@ export function Produtos() {
               <label className="text-sm font-medium text-gray-400">Categoria</label>
               <select className="px-3 py-2.5 rounded-lg bg-dark-900 border border-dark-600 text-gray-100 text-sm outline-none focus:border-accent transition-all" value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })}>
                 <option value="">Selecione...</option>
-                {mockCategorias.filter((c) => c.ativo).map((c) => (<option key={c.id} value={c.nome}>{c.nome}</option>))}
+                {categorias.filter((c) => c.ativo).map((c) => (<option key={c.id} value={c.nome}>{c.nome}</option>))}
               </select>
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-gray-400">Fornecedor</label>
               <select className="px-3 py-2.5 rounded-lg bg-dark-900 border border-dark-600 text-gray-100 text-sm outline-none focus:border-accent transition-all" value={form.fornecedor} onChange={(e) => setForm({ ...form, fornecedor: e.target.value })}>
                 <option value="">Selecione...</option>
-                {mockFornecedores.filter((f) => f.ativo).map((f) => (<option key={f.id} value={f.nomeFantasia}>{f.nomeFantasia}</option>))}
+                {fornecedores.filter((f) => f.ativo).map((f) => (<option key={f.id} value={f.nomeFantasia}>{f.nomeFantasia}</option>))}
               </select>
             </div>
           </div>

@@ -1,18 +1,38 @@
-import { useMemo, useState } from 'react'
-import { mockProdutos } from '../mock/produtos'
-import { mockItensVenda } from '../mock/itensVenda'
-import { mockVendas } from '../mock/vendas'
+import { useMemo, useState, useEffect } from 'react'
+import { fetchProdutos } from '../services/produtos'
+import { fetchVendas } from '../services/vendas'
+import type { Produto, Venda } from '../types'
 import { Card } from '../components/ui/Card'
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { formatCurrency } from '../utils/format'
 import { getProdutoImage } from '../utils/produtoImagem'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { Calendar, TrendingUp, Medal, Package } from 'lucide-react'
 
 export function MaisVendidos() {
+  const [produtos, setProdutos] = useState<Produto[]>([])
+  const [vendas, setVendas] = useState<Venda[]>([])
+  const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<'hoje' | 'semana' | 'mes' | 'ano'>('mes')
 
+  useEffect(() => {
+    async function load() {
+      try {
+        const [prods, vnds] = await Promise.all([
+          fetchProdutos(),
+          fetchVendas(),
+        ])
+        setProdutos(prods)
+        setVendas(vnds)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
+
   const ranking = useMemo(() => {
-    const vendasNoPeriodo = mockVendas.filter(v => {
+    const vendasNoPeriodo = vendas.filter(v => {
       if (v.status === 'cancelada') return false
       const d = new Date(v.data)
       const now = new Date()
@@ -28,23 +48,24 @@ export function MaisVendidos() {
       return d.getFullYear() === now.getFullYear()
     })
 
-    const vendasIds = new Set(vendasNoPeriodo.map(v => v.id))
-    const counts: Record<number, { qtd: number; total: number }> = {}
-    mockItensVenda.filter(i => vendasIds.has(i.vendaId)).forEach(item => {
-      if (!counts[item.produtoId]) counts[item.produtoId] = { qtd: 0, total: 0 }
-      counts[item.produtoId].qtd += item.quantidade
-      counts[item.produtoId].total += item.total
+    const counts: Record<string, { qtd: number; total: number }> = {}
+    vendasNoPeriodo.forEach(v => {
+      v.itens.forEach(item => {
+        if (!counts[item.produto]) counts[item.produto] = { qtd: 0, total: 0 }
+        counts[item.produto].qtd += item.quantidade
+        counts[item.produto].total += item.quantidade * item.precoUnitario
+      })
     })
 
     return Object.entries(counts)
-      .map(([produtoId, data]) => {
-        const prod = mockProdutos.find(p => p.id === Number(produtoId))
-        return { ...data, produtoId, produto: prod }
+      .map(([produtoNome, data]) => {
+        const prod = produtos.find(p => p.nome === produtoNome)
+        return { ...data, produtoId: prod?.id ?? 0, produto }
       })
       .filter(x => x.produto)
       .sort((a, b) => b.qtd - a.qtd)
       .slice(0, 10)
-  }, [period])
+  }, [vendas, produtos, period])
 
   const totalVendido = useMemo(() => ranking.reduce((s, r) => s + r.total, 0), [ranking])
   const totalUnidades = useMemo(() => ranking.reduce((s, r) => s + r.qtd, 0), [ranking])
@@ -57,6 +78,8 @@ export function MaisVendidos() {
   ]
 
   const cores = ['#10b981', '#059669', '#047857', '#34d399', '#6ee7b7', '#a7f3d0', '#065f46', '#047857', '#059669', '#10b981']
+
+  if (loading) return <LoadingSpinner />
 
   return (
     <div className="space-y-6">
@@ -103,11 +126,11 @@ export function MaisVendidos() {
           <h3 className="text-sm font-semibold text-gray-300 mb-4">Ranking</h3>
           <div className="space-y-3">
             {ranking.map((item, i) => (
-              <div key={item.produtoId} className="flex items-center gap-3">
+              <div key={item.produtoId || i} className="flex items-center gap-3">
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? 'bg-yellow-500/20 text-yellow-400' : i === 1 ? 'bg-gray-400/20 text-gray-300' : i === 2 ? 'bg-orange-500/20 text-orange-400' : 'bg-dark-700 text-gray-500'}`}>
                   {i + 1}
                 </div>
-                <img src={getProdutoImage(Number(item.produtoId))} alt={item.produto!.nome} className="w-10 h-10 rounded-lg object-cover bg-dark-900" />
+                <img src={getProdutoImage(item.produtoId)} alt={item.produto!.nome} className="w-10 h-10 rounded-lg object-cover bg-dark-900" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-gray-200 truncate">{item.produto!.nome}</p>
                   <p className="text-xs text-gray-500">{item.qtd} un vendidas</p>

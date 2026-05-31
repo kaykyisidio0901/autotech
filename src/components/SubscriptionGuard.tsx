@@ -1,9 +1,9 @@
+import { useState, useEffect } from 'react'
 import { useSubscriptionStore } from '../stores/subscriptionStore'
-import { planos } from '../mock/planos'
 import { Button } from './ui/Button'
 import { Card } from './ui/Card'
+import { LoadingSpinner } from './ui/LoadingSpinner'
 import { Lock, ArrowUp } from 'lucide-react'
-import type { Plano } from '../types'
 
 interface Props {
   feature: string
@@ -12,12 +12,24 @@ interface Props {
 }
 
 export function SubscriptionGuard({ feature, children, fallback }: Props) {
-  const { hasFeature, assinatura } = useSubscriptionStore()
+  const { hasFeature, assinatura, planos } = useSubscriptionStore()
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      const store = useSubscriptionStore.getState()
+      await Promise.all([store.fetchPlanos(), store.fetchMinhaAssinatura()])
+      setLoading(false)
+    }
+    load()
+  }, [])
+
   const liberado = hasFeature(feature)
 
+  if (loading) return <LoadingSpinner />
   if (liberado) return <>{children}</>
 
-  const planoMinimo = (planos as Plano[]).find(p => p.features[feature] === true)
+  const planoMinimo = planos.find(p => p.features[feature] === true)
   const nomePlano = planoMinimo?.nome || 'Medium'
 
   if (fallback) return <>{fallback}</>
@@ -31,7 +43,7 @@ export function SubscriptionGuard({ feature, children, fallback }: Props) {
         <h3 className="text-lg font-semibold text-gray-300 mb-2">Recurso Bloqueado</h3>
         <p className="text-sm text-gray-500 max-w-md mb-6">
           Este recurso está disponível apenas nos planos <strong className="text-gray-300">{nomePlano}</strong> e <strong className="text-gray-300">Pro</strong>.
-          {assinatura.planoId !== 'basic' && assinatura.status === 'ativa' && (
+          {assinatura?.planoId !== 'basic' && assinatura?.status === 'ativa' && (
             <> Faça um upgrade para liberar esta funcionalidade.</>
           )}
         </p>

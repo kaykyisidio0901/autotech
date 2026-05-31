@@ -1,30 +1,18 @@
-import { mockOrdensServico } from '../mock/ordensServico'
 import type { OrdemServico } from '../types'
-
-const delay = () => new Promise(r => setTimeout(r, 200))
+import { api } from './api'
 
 export async function listarOrdensServico(): Promise<OrdemServico[]> {
-  await delay()
-  return [...mockOrdensServico]
+  return api.get<OrdemServico[]>('/ordens-servico')
 }
 
 export async function buscarOrdemServico(id: number): Promise<OrdemServico | undefined> {
-  await delay()
-  return mockOrdensServico.find(o => o.id === id)
+  return api.get<OrdemServico>(`/ordens-servico/${id}`)
 }
 
 export async function salvarOrdemServico(data: Omit<OrdemServico, 'id'>): Promise<OrdemServico> {
-  await delay()
-  const id = Math.max(...mockOrdensServico.map(o => o.id), 0) + 1
-  const os = { ...data, id }
-  mockOrdensServico.push(os)
-  return os
+  return api.post<OrdemServico>('/ordens-servico', data)
 }
 
-export async function atualizarOrdemServico(id: number, data: Partial<OrdemServico>): Promise<OrdemServico | undefined> {
-  await delay()
-  const idx = mockOrdensServico.findIndex(o => o.id === id)
-  if (idx === -1) return undefined
-  mockOrdensServico[idx] = { ...mockOrdensServico[idx], ...data }
-  return mockOrdensServico[idx]
+export async function atualizarOrdemServico(id: number, data: Partial<OrdemServico>): Promise<OrdemServico> {
+  return api.put<OrdemServico>(`/ordens-servico/${id}`, data)
 }
