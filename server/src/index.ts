@@ -12,7 +12,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'autotech-jwt-secret'
 const JWT_EXPIRES = process.env.JWT_EXPIRES_IN || '7d'
 
 app.use(cors())
-app.use(express.json())
+app.use(express.json({ limit: '20mb' }))
 
 // --- Inline Types ---
 interface AuthRequest extends express.Request {
