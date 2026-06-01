@@ -3,7 +3,7 @@ import { listarOrdensServico, salvarOrdemServico, atualizarOrdemServico } from '
 import { listarClientes } from '../services/clientes'
 import { fetchProdutos } from '../services/produtos'
 import { api } from '../services/api'
-import type { OrdemServico, OSStatus, Cliente, Veiculo, Produto, User } from '../types'
+import type { OrdemServico, OSStatus, Cliente, Veiculo, Produto, User, OSProduto } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -47,7 +47,7 @@ export function OrdensServico() {
     clienteId: 0, veiculoId: 0, dataEntrada: new Date().toISOString().slice(0, 10),
     dataPrevista: '', responsavel: user?.nome || '', observacoes: '',
     servicos: [] as { descricao: string; valor: number }[],
-    produtos: [] as { nome: string; quantidade: number; valor: number }[],
+    produtosOS: [] as OSProduto[],
     valorMaoObra: 0, valorProdutos: 0, desconto: 0, status: 'aberta' as OSStatus,
   })
   const [novoServico, setNovoServico] = useState(emptyServico)
@@ -97,7 +97,7 @@ export function OrdensServico() {
     setForm({
       clienteId: 0, veiculoId: 0, dataEntrada: new Date().toISOString().slice(0, 10),
       dataPrevista: '', responsavel: user?.nome || '', observacoes: '',
-      servicos: [], produtos: [], valorMaoObra: 0, valorProdutos: 0, desconto: 0, status: 'aberta',
+      servicos: [], produtosOS: [], valorMaoObra: 0, valorProdutos: 0, desconto: 0, status: 'aberta',
     })
     setModalOpen(true)
   }
@@ -107,7 +107,7 @@ export function OrdensServico() {
     setForm({
       clienteId: os.clienteId, veiculoId: os.veiculoId, dataEntrada: os.dataEntrada,
       dataPrevista: os.dataPrevista, responsavel: os.responsavel, observacoes: os.observacoes,
-      servicos: os.servicos, produtos: os.produtos, valorMaoObra: os.valorMaoObra,
+      servicos: os.servicos, produtosOS: os.produtosOS, valorMaoObra: os.valorMaoObra,
       valorProdutos: os.valorProdutos, desconto: os.desconto, status: os.status,
     })
     setModalOpen(true)
@@ -129,7 +129,7 @@ export function OrdensServico() {
     const val = prod ? prod.precoVenda : novoProdutoOS.valor
     setForm(p => ({
       ...p,
-      produtos: [...p.produtos, { nome: novoProdutoOS.nome, quantidade: novoProdutoOS.quantidade, valor: val }],
+      produtosOS: [...p.produtosOS, { nome: novoProdutoOS.nome, quantidade: novoProdutoOS.quantidade, valor: val }],
       valorProdutos: p.valorProdutos + (val * novoProdutoOS.quantidade),
     }))
     setNovoProdutoOS(emptyOSProduto)
@@ -146,9 +146,9 @@ export function OrdensServico() {
 
   function removeProdutoOS(idx: number) {
     setForm(p => {
-      const produtos = p.produtos.filter((_, i) => i !== idx)
-      const valorProdutos = produtos.reduce((s, pr) => s + pr.valor * pr.quantidade, 0)
-      return { ...p, produtos, valorProdutos }
+      const produtosOS = p.produtosOS.filter((_, i) => i !== idx)
+      const valorProdutos = produtosOS.reduce((s, pr) => s + pr.valor * pr.quantidade, 0)
+      return { ...p, produtosOS, valorProdutos }
     })
   }
 
@@ -164,7 +164,7 @@ export function OrdensServico() {
       veiculoId: form.veiculoId, veiculoPlaca: veiculo.placa,
       dataEntrada: form.dataEntrada, dataPrevista: form.dataPrevista,
       responsavel: form.responsavel, observacoes: form.observacoes,
-      servicos: form.servicos, produtos: form.produtos,
+      servicos: form.servicos, produtosOS: form.produtosOS,
       valorMaoObra: form.valorMaoObra, valorProdutos: form.valorProdutos,
       desconto: form.desconto, valorFinal, status: form.status as OSStatus,
     }
@@ -316,7 +316,7 @@ export function OrdensServico() {
               <div className="w-28"><Input label="Valor unit." type="number" step={0.01} value={String(novoProdutoOS.valor || '')} onChange={e => setNovoProdutoOS(p => ({ ...p, valor: parseFloat(e.target.value) || 0 }))} /></div>
               <Button variant="secondary" onClick={addProdutoOS}>Adicionar</Button>
             </div>
-            {form.produtos.map((pr, i) => (
+            {form.produtosOS.map((pr, i) => (
               <div key={i} className="flex items-center justify-between py-2 px-3 bg-dark-700/50 rounded-lg mb-2">
                 <span className="text-gray-300 text-sm">{pr.nome} x{pr.quantidade}</span>
                 <div className="flex items-center gap-3">
@@ -375,10 +375,10 @@ export function OrdensServico() {
                 ))}
               </div>
             )}
-            {detailOpen.produtos.length > 0 && (
+            {(detailOpen as any).produtosOS?.length > 0 && (
               <div>
                 <h4 className="text-sm font-semibold text-gray-400 mb-2">Produtos</h4>
-                {detailOpen.produtos.map((pr, i) => (
+                {(detailOpen as any).produtosOS?.map((pr: any, i: number) => (
                   <div key={i} className="flex justify-between py-1.5 text-sm"><span className="text-gray-300">{pr.nome} x{pr.quantidade}</span><span className="text-gray-400">{formatCurrency(pr.valor * pr.quantidade)}</span></div>
                 ))}
               </div>

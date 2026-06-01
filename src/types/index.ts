@@ -153,7 +153,7 @@ export interface OrdemServico {
   responsavel: string
   observacoes: string
   servicos: OSServico[]
-  produtos: OSProduto[]
+  produtosOS: OSProduto[]
   valorMaoObra: number
   valorProdutos: number
   desconto: number

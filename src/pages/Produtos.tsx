@@ -106,16 +106,24 @@ export function Produtos() {
     setModalOpen(true)
   }
 
+  const [saveError, setSaveError] = useState('')
+
   const handleSave = useCallback(async () => {
     if (!form.nome.trim()) return
-    if (editing) {
-      const updated = await updateProduto(editing.id, form)
-      setProdutos((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
-    } else {
-      const created = await createProduto(form)
-      setProdutos((prev) => [...prev, created])
+    setSaveError('')
+    try {
+      const payload = { ...form, codigoInterno: form.codigoInterno || `PROD-${Date.now()}` }
+      if (editing) {
+        const updated = await updateProduto(editing.id, payload as any)
+        setProdutos((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
+      } else {
+        const created = await createProduto(payload as any)
+        setProdutos((prev) => [...prev, created])
+      }
+      setModalOpen(false)
+    } catch (err: any) {
+      setSaveError(err?.message || 'Erro ao salvar produto')
     }
-    setModalOpen(false)
   }, [form, editing])
 
   const handleDelete = useCallback(async (id: number) => {
@@ -335,6 +343,7 @@ export function Produtos() {
             </button>
             <span className="text-sm text-gray-300">{form.status ? 'Ativo' : 'Inativo'}</span>
           </div>
+          {saveError && <p className="text-sm text-red-400">{saveError}</p>}
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="ghost" onClick={() => setModalOpen(false)}>Cancelar</Button>
             <Button onClick={handleSave} disabled={!form.nome.trim()}>Salvar</Button>
