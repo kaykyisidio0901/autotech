@@ -52,6 +52,8 @@ export function OrdensServico() {
   })
   const [novoServico, setNovoServico] = useState(emptyServico)
   const [novoProdutoOS, setNovoProdutoOS] = useState(emptyOSProduto)
+  const [buscaProduto, setBuscaProduto] = useState('')
+  const [showProdutosList, setShowProdutosList] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -131,6 +133,7 @@ export function OrdensServico() {
       valorProdutos: p.valorProdutos + (val * novoProdutoOS.quantidade),
     }))
     setNovoProdutoOS(emptyOSProduto)
+    setBuscaProduto('')
   }
 
   function removeServico(idx: number) {
@@ -287,9 +290,30 @@ export function OrdensServico() {
 
           <div>
             <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Produtos</h3>
-            <div className="flex items-end gap-3 mb-3">
-              <div className="flex-1"><Input label="Produto" value={novoProdutoOS.nome} onChange={e => setNovoProdutoOS(p => ({ ...p, nome: e.target.value }))} /></div>
-              <div className="w-24"><Input label="Qtd" type="number" value={String(novoProdutoOS.quantidade || '')} onChange={e => setNovoProdutoOS(p => ({ ...p, quantidade: parseInt(e.target.value) || 1 }))} /></div>
+            <div className="flex items-end gap-3 mb-3 relative">
+              <div className="flex-1 relative">
+                <Input label="Produto" value={buscaProduto} onChange={e => { setBuscaProduto(e.target.value); setShowProdutosList(true); setNovoProdutoOS(p => ({ ...p, nome: e.target.value })) }}
+                  onFocus={() => setShowProdutosList(true)} onBlur={() => setTimeout(() => setShowProdutosList(false), 200)} />
+                {showProdutosList && buscaProduto && (
+                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-dark-800 border border-dark-600 rounded-lg max-h-48 overflow-y-auto shadow-xl">
+                    {produtos
+                      .filter(p => p.nome.toLowerCase().includes(buscaProduto.toLowerCase()))
+                      .slice(0, 10)
+                      .map(p => (
+                        <button key={p.id} type="button" className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-dark-600 cursor-pointer border-b border-dark-700 last:border-0"
+                          onMouseDown={() => { setBuscaProduto(p.nome); setNovoProdutoOS({ nome: p.nome, quantidade: 1, valor: p.precoVenda }); setShowProdutosList(false) }}>
+                          <span className="font-medium">{p.nome}</span>
+                          <span className="text-gray-500 ml-2">R$ {p.precoVenda.toFixed(2)}</span>
+                        </button>
+                      ))}
+                    {produtos.filter(p => p.nome.toLowerCase().includes(buscaProduto.toLowerCase())).length === 0 && (
+                      <div className="px-3 py-2 text-sm text-gray-500">Nenhum produto encontrado</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            <div className="w-24"><Input label="Qtd" type="number" value={String(novoProdutoOS.quantidade || '')} onChange={e => setNovoProdutoOS(p => ({ ...p, quantidade: parseInt(e.target.value) || 1 }))} /></div>
+              <div className="w-28"><Input label="Valor unit." type="number" step={0.01} value={String(novoProdutoOS.valor || '')} onChange={e => setNovoProdutoOS(p => ({ ...p, valor: parseFloat(e.target.value) || 0 }))} /></div>
               <Button variant="secondary" onClick={addProdutoOS}>Adicionar</Button>
             </div>
             {form.produtos.map((pr, i) => (
