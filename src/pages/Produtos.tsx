@@ -14,7 +14,7 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { formatCurrency } from '../utils/format'
 import { getProdutoImage, getProdutoGallery } from '../utils/produtoImagem'
 import { useAuthStore } from '../stores/authStore'
-import { Upload, Image as ImageIcon, LayoutGrid, List, Camera } from 'lucide-react'
+import { Upload, LayoutGrid, List, Camera } from 'lucide-react'
 
 const emptyForm: Omit<Produto, 'id'> = {
   codigoInterno: '', codigoBarras: '', nome: '', categoria: '', marca: '',
@@ -206,8 +206,8 @@ export function Produtos() {
                 {paged.map((prod) => (
                   <tr key={prod.id} className="border-b border-dark-600 last:border-0 hover:bg-dark-700/50 transition-colors cursor-pointer" onClick={() => setPreviewProd(prod)}>
                     <td className="px-3 py-2">
-                      <img src={getProdutoImage(prod.id)} alt={prod.nome} className="w-10 h-10 rounded-lg object-cover" loading="lazy"
-                        onError={e => { (e.target as HTMLImageElement).src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" style="background:%231e293b"><text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="%2310b981" font-size="14">${prod.id}</text></svg>` }} />
+                      <img src={prod.imagem || getProdutoImage(prod.id)} alt={prod.nome} className="w-10 h-10 rounded-lg object-cover" loading="lazy"
+                        onError={e => { (e.target as HTMLImageElement).src = getProdutoImage(prod.id) }} />
                     </td>
                     <td className="px-3 py-3 text-gray-500 font-mono text-xs">{prod.codigoInterno}</td>
                     <td className="px-3 py-3 text-gray-200 font-medium max-w-[200px] truncate">{prod.nome}</td>
@@ -243,9 +243,8 @@ export function Produtos() {
           {paged.map(prod => (
             <div key={prod.id} className="bg-dark-800 border border-dark-600 rounded-xl overflow-hidden hover:border-accent/30 transition-all group cursor-pointer" onClick={() => setPreviewProd(prod)}>
               <div className="aspect-square bg-dark-900 flex items-center justify-center overflow-hidden">
-                <img src={getProdutoImage(prod.id)} alt={prod.nome} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  onError={e => { const t = e.target as HTMLImageElement; t.style.display = 'none'; (t.nextElementSibling as HTMLElement)?.classList.remove('hidden') }} />
-                <div className="absolute inset-0 flex items-center justify-center text-gray-600 hidden"><ImageIcon size={32} /></div>
+                <img src={prod.imagem || getProdutoImage(prod.id)} alt={prod.nome} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  onError={e => { (e.target as HTMLImageElement).src = getProdutoImage(prod.id) }} />
               </div>
               <div className="p-3">
                 <p className="text-sm font-medium text-gray-200 truncate">{prod.nome}</p>
@@ -268,13 +267,13 @@ export function Produtos() {
             <div className="shrink-0">
               <div className="w-32 h-32 bg-dark-900 border border-dark-600 rounded-xl flex items-center justify-center overflow-hidden relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                 {selectedImage || form.imagem ? (
-                  <img src={selectedImage || form.imagem || ''} alt="Preview" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="text-center">
-                    <Camera size={28} className="mx-auto text-gray-600 mb-1" />
-                    <p className="text-xs text-gray-600">Foto</p>
-                  </div>
-                )}
+                  <img src={selectedImage || form.imagem || ''} alt="Preview" className="w-full h-full object-cover"
+                    onError={e => { const t = e.target as HTMLImageElement; t.style.display = 'none'; t.nextElementSibling?.classList.remove('hidden') }} />
+                ) : null}
+                <div className={`text-center ${selectedImage || form.imagem ? 'hidden' : ''}`}>
+                  <Camera size={28} className="mx-auto text-gray-600 mb-1" />
+                  <p className="text-xs text-gray-600">Foto</p>
+                </div>
                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                   <Upload size={20} className="text-white" />
                 </div>
@@ -347,7 +346,8 @@ export function Produtos() {
         {previewProd && (
           <div className="space-y-4">
             <div className="flex gap-4">
-              <img src={getProdutoImage(previewProd.id)} alt={previewProd.nome} className="w-40 h-40 rounded-xl object-cover bg-dark-900" />
+              <img src={previewProd.imagem || getProdutoImage(previewProd.id)} alt={previewProd.nome} className="w-40 h-40 rounded-xl object-cover bg-dark-900"
+                onError={e => { (e.target as HTMLImageElement).src = getProdutoImage(previewProd.id) }} />
               <div className="flex-1 space-y-2 text-sm">
                 <div className="grid grid-cols-2 gap-2">
                   <div><span className="text-gray-500">Código:</span> <span className="text-gray-200 ml-1">{previewProd.codigoInterno}</span></div>
