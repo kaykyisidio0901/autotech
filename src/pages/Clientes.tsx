@@ -28,7 +28,7 @@ const estados = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG
 
 export function Clientes() {
   const user = useAuthStore((s) => s.user)
-  const canEdit = user?.role === 'proprietario' || user?.role === 'gerente'
+  const canEdit = user?.role === 'admin' || user?.role === 'proprietario' || user?.role === 'gerente'
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [veiculos, setVeiculos] = useState<Record<number, Veiculo[]>>({})
   const [loading, setLoading] = useState(true)

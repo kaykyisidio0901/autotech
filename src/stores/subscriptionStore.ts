@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { api } from '../services/api'
-import type { Assinatura, PagamentoAssinatura, NotificacaoAssinatura, CicloFaturamento, Plano, PlanoId } from '../types'
+import type { Assinatura, PagamentoAssinatura, NotificacaoAssinatura, CicloFaturamento, Plano, PlanoId, AssinaturaStatus } from '../types'
 
 interface SubscriptionState {
   planos: Plano[]
@@ -81,14 +81,14 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
 
   getPlano: (id) => get().planos.find(p => p.id === id),
 
-  hasFeature: (feature) => {
+  hasFeature: (_feature) => {
     const { assinatura, emTeste } = get()
     if (emTeste) return true
     if (!assinatura) return false
     return true
   },
 
-  checkFeature: (feature) => {
+  checkFeature: (_feature) => {
     const { assinatura, emTeste } = get()
     if (emTeste || assinatura?.status === 'teste') return { liberado: true, planoMinimo: null }
     return { liberado: true, planoMinimo: null }

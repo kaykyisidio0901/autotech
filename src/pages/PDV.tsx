@@ -29,7 +29,7 @@ interface Pagamento {
 
 export function PDV() {
   const user = useAuthStore((s) => s.user)
-  const canDiscount = user?.role === 'proprietario' || user?.role === 'gerente'
+  const canDiscount = user?.role === 'admin' || user?.role === 'proprietario' || user?.role === 'gerente'
 
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [clientes, setClientes] = useState<Cliente[]>([])
@@ -368,7 +368,7 @@ export function PDV() {
               <select value={vendedorId} onChange={e => setVendedorId(Number(e.target.value))}
                 className="px-3 py-2.5 rounded-lg bg-dark-900 border border-dark-600 text-gray-100 text-sm outline-none focus:border-accent transition-all">
                 {funcionarios.map(f => (
-                  <option key={f.id} value={f.id}>{f.nome} ({f.role === 'proprietario' ? 'Proprietário' : f.role === 'gerente' ? 'Gerente' : 'Funcionário'})</option>
+                  <option key={f.id} value={f.id}>{f.nome} ({f.role === 'admin' || f.role === 'proprietario' ? 'Proprietário' : f.role === 'gerente' ? 'Gerente' : 'Funcionário'})</option>
                 ))}
               </select>
             </div>

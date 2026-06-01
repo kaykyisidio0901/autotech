@@ -28,7 +28,7 @@ const emptyOSProduto = { nome: '', quantidade: 1, valor: 0 }
 
 export function OrdensServico() {
   const user = useAuthStore((s) => s.user)
-  const canEdit = user?.role === 'proprietario' || user?.role === 'gerente'
+  const canEdit = user?.role === 'admin' || user?.role === 'proprietario' || user?.role === 'gerente'
   const [ordens, setOrdens] = useState<OrdemServico[]>([])
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [veiculos, setVeiculos] = useState<Veiculo[]>([])
@@ -66,12 +66,7 @@ export function OrdensServico() {
       setClientes(c)
       setProdutos(p)
       setUsers(u.filter(u => u.ativo))
-      const veicMap: Veiculo[] = []
-      await Promise.all(c.map(async (cl) => {
-        const { listarVeiculos } = await import('../services/clientes')
-        const v = await listarVeiculos(cl.id)
-        veicMap.push(...v)
-      }))
+      const veicMap: Veiculo[] = await api.get<Veiculo[]>('/veiculos')
       setVeiculos(veicMap)
       setLoading(false)
     }
@@ -256,7 +251,7 @@ export function OrdensServico() {
                 className="px-3 py-2.5 rounded-lg bg-dark-800 border border-dark-600 text-gray-100 text-sm outline-none focus:border-accent">
                 <option value="">Selecione...</option>
                 {users.filter(u => u.ativo).map(u => (
-                  <option key={u.id} value={u.nome}>{u.nome} — {u.role === 'proprietario' ? 'Proprietário' : u.role === 'gerente' ? 'Gerente' : 'Técnico'}</option>
+                  <option key={u.id} value={u.nome}>{u.nome} — {u.role === 'admin' || u.role === 'proprietario' ? 'Proprietário' : u.role === 'gerente' ? 'Gerente' : 'Técnico'}</option>
                 ))}
               </select>
             </div>

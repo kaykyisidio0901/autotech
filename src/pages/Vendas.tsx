@@ -62,7 +62,7 @@ export function Vendas() {
   const [novoProdutoPreco, setNovoProdutoPreco] = useState(0)
   const [criandoProduto, setCriandoProduto] = useState<number | null>(null)
 
-  const canDiscount = user?.role === 'proprietario' || user?.role === 'gerente'
+  const canDiscount = user?.role === 'admin' || user?.role === 'proprietario' || user?.role === 'gerente'
 
   useEffect(() => {
     async function load() {

@@ -25,7 +25,7 @@ const statusLabel: Record<ContaStatus, string> = {
 
 export function Financeiro() {
   const user = useAuthStore((s) => s.user)
-  const canEdit = user?.role === 'proprietario' || user?.role === 'gerente'
+  const canEdit = user?.role === 'admin' || user?.role === 'proprietario' || user?.role === 'gerente'
   const [tab, setTab] = useState<Tab>('fluxo')
   const [receber, setReceber] = useState<ContaReceber[]>([])
   const [pagar, setPagar] = useState<ContaPagar[]>([])

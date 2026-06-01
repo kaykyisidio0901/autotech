@@ -12,7 +12,7 @@ import { useAuthStore } from '../stores/authStore'
 
 export function Categorias() {
   const user = useAuthStore((s) => s.user)
-  const canEdit = user?.role === 'proprietario' || user?.role === 'gerente'
+  const canEdit = user?.role === 'admin' || user?.role === 'proprietario' || user?.role === 'gerente'
   const [categorias, setCategorias] = useState<Categoria[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')

@@ -41,7 +41,7 @@ const tabs = [
 
 export function Configuracoes() {
   const user = useAuthStore((s) => s.user)
-  const isOwner = user?.role === 'proprietario'
+  const isOwner = user?.role === 'admin' || user?.role === 'proprietario'
   const [activeTab, setActiveTab] = useState('empresa')
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -394,8 +394,8 @@ export function Configuracoes() {
                           <td className="py-3 px-2 font-medium text-gray-200">{u.nome}</td>
                           <td className="py-3 px-2 text-gray-400">{u.email}</td>
                           <td className="py-3 px-2">
-                            <BadgeStatus label={u.role === 'proprietario' ? 'Proprietário' : u.role === 'gerente' ? 'Gerente' : 'Funcionário'}
-                              variant={u.role === 'proprietario' ? 'info' : u.role === 'gerente' ? 'warning' : 'muted'} />
+                            <BadgeStatus label={u.role === 'admin' || u.role === 'proprietario' ? 'Proprietário' : u.role === 'gerente' ? 'Gerente' : 'Funcionário'}
+                              variant={u.role === 'admin' || u.role === 'proprietario' ? 'info' : u.role === 'gerente' ? 'warning' : 'muted'} />
                           </td>
                           <td className="py-3 px-2 text-center">
                             <BadgeStatus label={u.ativo ? 'Ativo' : 'Inativo'} variant={u.ativo ? 'success' : 'danger'} />

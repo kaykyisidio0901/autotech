@@ -84,8 +84,9 @@ model Cliente {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  empresa   Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  veiculos  Veiculo[]
+  empresa       Empresa       @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  veiculos      Veiculo[]
+  ordensServico OrdemServico[]
 
   @@unique([empresaId, cpf])
   @@map("clientes")
@@ -230,6 +231,7 @@ model OrdemServico {
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   empresa  Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  cliente  Cliente  @relation(fields: [clienteId], references: [id])
   servicos OSServico[]
   produtosOS OSProduto[]
 

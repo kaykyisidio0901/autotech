@@ -60,7 +60,7 @@ export function MaisVendidos() {
     return Object.entries(counts)
       .map(([produtoNome, data]) => {
         const prod = produtos.find(p => p.nome === produtoNome)
-        return { ...data, produtoId: prod?.id ?? 0, produto }
+        return { ...data, produtoId: prod?.id ?? 0, produto: prod }
       })
       .filter(x => x.produto)
       .sort((a, b) => b.qtd - a.qtd)

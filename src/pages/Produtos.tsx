@@ -27,7 +27,9 @@ type ViewMode = 'table' | 'grid'
 
 export function Produtos() {
   const user = useAuthStore((s) => s.user)
-  const canEdit = user?.role === 'proprietario' || user?.role === 'gerente'
+  const canEdit = user?.role === 'admin' || user?.role === 'proprietario' || user?.role === 'gerente'
+  console.log('🔍 [Produtos] user:', user, '| canEdit:', canEdit)
+  const roleBadge = user ? { admin: '🟢 Proprietário', proprietario: '🟢 Proprietário', gerente: '🔵 Gerente', funcionario: '⚪ Funcionário' }[user.role] || '⚪ Desconhecido' : '🔴 Não logado'
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [categorias, setCategorias] = useState<Categoria[]>([])
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([])
@@ -157,6 +159,7 @@ export function Produtos() {
             <button onClick={() => setViewMode('table')} className={`p-1.5 rounded ${viewMode === 'table' ? 'bg-accent text-white' : 'text-gray-500 hover:text-gray-300'} cursor-pointer`}><List size={16} /></button>
             <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded ${viewMode === 'grid' ? 'bg-accent text-white' : 'text-gray-500 hover:text-gray-300'} cursor-pointer`}><LayoutGrid size={16} /></button>
           </div>
+          <span className="text-xs px-2 py-1 rounded bg-dark-700 text-gray-300 font-mono">{roleBadge}</span>
           {canEdit && <Button onClick={openNew}>+ Novo Produto</Button>}
         </div>
       </div>

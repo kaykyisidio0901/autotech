@@ -8,13 +8,21 @@ import { Check, Star, Zap, Shield } from 'lucide-react'
 const iconePlano = { basic: Star, medium: Zap, pro: Shield }
 
 export function Planos() {
-  const { planos, upgrade, assinatura, iniciarTeste, emTeste } = useSubscriptionStore()
+  const { planos, upgrade, assinatura, emTeste } = useSubscriptionStore()
   const [ciclo, setCiclo] = useState<'mensal' | 'anual'>('mensal')
   const [confirmOpen, setConfirmOpen] = useState<typeof planos[0] | null>(null)
 
   function handleContratar(plano: typeof planos[0]) {
-    if (plano.id === assinatura.planoId && assinatura.status === 'ativa') return
+    if (plano.id === assinatura?.planoId && assinatura?.status === 'ativa') return
     setConfirmOpen(plano)
+  }
+
+  async function iniciarTeste() {
+    try {
+      const { api } = await import('../services/api')
+      await api.post('/assinaturas/teste')
+      await useSubscriptionStore.getState().fetchMinhaAssinatura()
+    } catch { /* ignore */ }
   }
 
   function confirmar() {
@@ -47,8 +55,8 @@ export function Planos() {
           const Icon = iconePlano[plano.id]
           const preco = ciclo === 'mensal' ? plano.precoMensal : plano.precoAnual
           const economia = ciclo === 'anual' ? plano.precoMensal * 12 - plano.precoAnual : 0
-          const isCurrent = plano.id === assinatura.planoId && assinatura.status === 'ativa' && !emTeste
-          const isProTrial = emTeste || assinatura.status === 'teste'
+          const isCurrent = plano.id === assinatura?.planoId && assinatura?.status === 'ativa' && !emTeste
+          const isProTrial = emTeste || assinatura?.status === 'teste'
 
           return (
             <div key={plano.id}
@@ -119,7 +127,7 @@ export function Planos() {
                   disabled={isCurrent || (isProTrial && plano.id === 'pro')}
                   onClick={() => handleContratar(plano)}
                   className="!mt-auto">
-                  {isCurrent ? 'Plano Atual' : isProTrial && plano.id === 'pro' ? 'Em Teste' : assinatura.planoId === plano.id ? 'Recontratar' : 'Assinar Agora'}
+                  {isCurrent ? 'Plano Atual' : isProTrial && plano.id === 'pro' ? 'Em Teste' : assinatura?.planoId === plano.id ? 'Recontratar' : 'Assinar Agora'}
                 </Button>
               </div>
             </div>
@@ -129,10 +137,10 @@ export function Planos() {
 
       <div className="text-center">
         <p className="text-sm text-gray-500 mb-4">Quer testar antes de decidir?</p>
-        <Button variant="secondary" onClick={iniciarTeste} disabled={emTeste || assinatura.status === 'teste'}>
+        <Button variant="secondary" onClick={iniciarTeste} disabled={emTeste || assinatura?.status === 'teste'}>
           <Zap size={16} className="mr-2" />Iniciar Teste Grátis de 14 Dias
         </Button>
-        {(emTeste || assinatura.status === 'teste') && (
+        {(emTeste || assinatura?.status === 'teste') && (
           <p className="text-xs text-accent mt-2">
             Teste grátis ativo — {useSubscriptionStore.getState().diasRestantesTeste()} dias restantes
           </p>
@@ -149,9 +157,9 @@ export function Planos() {
                 <span className="text-sm text-gray-500 font-normal">/{ciclo === 'mensal' ? 'mês' : 'ano'}</span>
               </p>
             </div>
-            {assinatura.planoId !== 'basic' && assinatura.status === 'ativa' && (
+            {assinatura?.planoId !== 'basic' && assinatura?.status === 'ativa' && (
               <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 text-sm text-yellow-400 text-center">
-                Upgrade do plano {planos.find(p => p.id === assinatura.planoId)?.nome} → {confirmOpen.nome}
+                Upgrade do plano {planos.find(p => p.id === assinatura?.planoId)?.nome} → {confirmOpen.nome}
               </div>
             )}
             <div className="flex gap-3 pt-2">
