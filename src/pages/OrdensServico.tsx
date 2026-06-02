@@ -152,11 +152,14 @@ export function OrdensServico() {
     })
   }
 
+  const [saveError, setSaveError] = useState('')
+
   const handleSave = useCallback(async () => {
-    if (!form.clienteId || !form.veiculoId) return
+    if (!form.clienteId || !form.veiculoId) { setSaveError('Selecione cliente e veículo'); return }
     const cliente = clientes.find(c => c.id === form.clienteId)
     const veiculo = getVeiculos(form.clienteId).find(v => v.id === form.veiculoId)
-    if (!cliente || !veiculo) return
+    if (!cliente || !veiculo) { setSaveError('Cliente ou veículo não encontrado'); return }
+    setSaveError('')
     const valorFinal = form.valorMaoObra + form.valorProdutos - form.desconto
     const data = {
       numero: editing?.numero || `OS-${String(ordens.length + 1).padStart(3, '0')}`,
@@ -168,14 +171,19 @@ export function OrdensServico() {
       valorMaoObra: form.valorMaoObra, valorProdutos: form.valorProdutos,
       desconto: form.desconto, valorFinal, status: form.status as OSStatus,
     }
-    if (editing) {
-      const updated = await atualizarOrdemServico(editing.id, data)
-      if (updated) setOrdens(prev => prev.map(o => o.id === updated.id ? updated : o))
-    } else {
-      const created = await salvarOrdemServico(data)
-      setOrdens(prev => [...prev, created])
+    try {
+      if (editing) {
+        const updated = await atualizarOrdemServico(editing.id, data)
+        if (updated) setOrdens(prev => prev.map(o => o.id === updated.id ? updated : o))
+      } else {
+        const created = await salvarOrdemServico(data)
+        setOrdens(prev => [...prev, created])
+      }
+      setModalOpen(false)
+    } catch (err: any) {
+      setSaveError(err?.message || 'Erro ao salvar OS')
+      console.error('[saveOS]', err)
     }
-    setModalOpen(false)
   }, [form, editing, clientes, veiculos, ordens.length])
 
   if (loading) return <LoadingSpinner />
@@ -348,6 +356,7 @@ export function OrdensServico() {
             <span className="text-xl font-bold text-accent">{formatCurrency(form.valorMaoObra + form.valorProdutos - form.desconto)}</span>
           </div>
 
+          {saveError && <p className="text-sm text-red-400">{saveError}</p>}
           <div className="flex justify-end gap-3">
             <Button variant="secondary" onClick={() => setModalOpen(false)}>Cancelar</Button>
             <Button onClick={handleSave}>Salvar OS</Button>

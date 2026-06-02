@@ -548,7 +548,9 @@ const osServicoSchema = z.object({ descricao: z.string(), valor: z.number() })
 const osProdutoSchema = z.object({ nome: z.string(), quantidade: z.number(), valor: z.number() })
 const osSchema = z.object({
   clienteId: z.number(),
+  clienteNome: z.string().min(1),
   veiculoId: z.number().optional().nullable(),
+  veiculoPlaca: z.string().optional(),
   numero: z.string().min(1),
   dataEntrada: z.string().optional(),
   dataPrevista: z.string().optional(),
